@@ -57,7 +57,7 @@ public class SaleItemDAOIMPL implements MagazineDAO<SaleItem> {
                 if (generatedKeys.next()) {
                     sale.setId(generatedKeys.getLong(1));
                 } else {
-                    throw new SQLException("Creating user failed, no ID obtained.");
+                    throw new SQLException("Creating SALEITEM failed, no ID obtained.");
                 }
             }
             if (saleDAOIMPL.updateTotal(sale.getSubTotal(), sale.getSale(), false))

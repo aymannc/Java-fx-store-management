@@ -1,5 +1,8 @@
 package magazineUI;
 
+import javafx.beans.binding.Bindings;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.SimpleDoubleProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
@@ -8,11 +11,14 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import javafx.util.StringConverter;
+import javafx.util.converter.DoubleStringConverter;
 import paymentsManagment.Payment;
 import paymentsManagment.PaymentDAOIMPL;
 import salesManagment.Sale;
 import salesManagment.SaleDAOIMPL;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 
 public class PaymentUI extends BaseUI {
@@ -24,6 +30,10 @@ public class PaymentUI extends BaseUI {
     ComboBox comboBox;
 
     Sale sale;
+
+    private DoubleProperty total;
+    private DoubleProperty payed;
+    private DoubleProperty rest;
 
     public PaymentUI(String label, Stage parentStage, Sale sale) {
         super(label);
@@ -88,17 +98,24 @@ public class PaymentUI extends BaseUI {
         }
         FilteredList<Payment> filteredList = new FilteredList<>(paymentObservableList);
         paymentTableView.setItems(filteredList);
-        textFieldList[2].textProperty().addListener((observable, oldValue, newValue) ->
+        textFieldList[5].textProperty().addListener((observable, oldValue, newValue) ->
                 filteredList.setPredicate(newValue == null || newValue.length() == 0 ? s -> true : s -> s.getType().
                         toLowerCase().contains(newValue.toLowerCase()))
         );
+        total.set(sale.getTotal());
+        payed.set(paymentDAOIMPL.getTotalPayed(sale));
+        textFieldList[3].setText(String.valueOf(rest.get()));
     }
 
     @Override
     protected void createInsertContainer() {
+
+        total = new SimpleDoubleProperty();
+        payed = new SimpleDoubleProperty();
+        rest = new SimpleDoubleProperty();
         saleDAOIMPL = new SaleDAOIMPL();
         labelList = new Label[8];
-        textFieldList = new TextField[5];
+        textFieldList = new TextField[6];
         insertContainer = new VBox(10);
         insertContainer.setMinWidth(Width / 3.0 - 20);
         labelList[0] = new Label("Total : ");
@@ -123,8 +140,12 @@ public class PaymentUI extends BaseUI {
         labelList[5] = new Label("Type :");
         comboBox = new ComboBox(FXCollections.observableArrayList(SaleDAOIMPL.paymentTypes));
 
-
-        insertContainer.getChildren().addAll(holder1, holder2, holder3, labelList[2], textFieldList[2], labelList[3],
+        StringConverter<? extends Number> converter = new DoubleStringConverter();
+        Bindings.bindBidirectional(textFieldList[1].textProperty(), rest, (StringConverter<Number>) converter);
+        Bindings.bindBidirectional(textFieldList[4].textProperty(), payed, (StringConverter<Number>) converter);
+        Bindings.bindBidirectional(textFieldList[0].textProperty(), total, (StringConverter<Number>) converter);
+        rest.bind(total.subtract(payed));
+        insertContainer.getChildren().addAll(holder1, holder3, holder2, labelList[2], textFieldList[2], labelList[3],
                 datePicker, labelList[4], textFieldList[3], labelList[5], comboBox);
 
     }
@@ -134,9 +155,9 @@ public class PaymentUI extends BaseUI {
         tableContainer = new VBox(30);
         tableContainer.setMinWidth(Width >> 1);
         labelList[6] = new Label("Search for :(type)");
-        textFieldList[2] = new TextField();
+        textFieldList[5] = new TextField();
         createDataView();
-        tableContainer.getChildren().addAll(labelList[6], textFieldList[2], paymentTableView);
+        tableContainer.getChildren().addAll(labelList[6], textFieldList[5], paymentTableView);
 
     }
 
@@ -149,11 +170,12 @@ public class PaymentUI extends BaseUI {
         setTotalPayed(textFieldList[4]);
         paymentTableView.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
             if (newSelection != null) {
-
+                textFieldList[2].setText(String.valueOf(newSelection.getNum()));
+                datePicker.setValue(newSelection.getDate());
+                textFieldList[3].setText(String.valueOf(newSelection.getAmount()));
+                comboBox.getSelectionModel().select(newSelection.getType());
             }
-
         });
-
     }
 
     private void setTotalPayed(TextField label) {
@@ -163,24 +185,90 @@ public class PaymentUI extends BaseUI {
         } catch (NullPointerException e) {
             total = 0;
         }
-
         label.setText(String.valueOf(total));
-
     }
 
     @Override
     protected void addButtonClick() {
-
+        if (rest.getValue() > 0) {
+            long num = 0;
+            try {
+                num = paymentObservableList.get(paymentObservableList.size() - 1).getNum() + 1;
+            } catch (Exception ignored) {
+            }
+            LocalDate date = getDateDatepicker(datePicker);
+            Double amount = checkDouble(textFieldList[3]);
+            String type = getStringComboBoxInput(comboBox);
+            System.out.println(date);
+            if (date != null && amount != null && type != null) {
+                if (amount > rest.get()) {
+                    setAsError(textFieldList[3]);
+                    System.out.println("Reduce the amount");
+                } else {
+                    Payment p = new Payment(null, num, amount, date, type, sale);
+                    if (paymentDAOIMPL.create(p)) {
+                        paymentObservableList.add(p);
+                        clearButtonClick();
+                        payed.set(payed.get() + amount);
+                    }
+                }
+            } else {
+                System.out.println("Non valid input");
+            }
+        } else {
+            System.out.println("Already payed");
+        }
     }
+
 
     @Override
     protected void updateButtonClick() {
+        Payment p = paymentTableView.getSelectionModel().getSelectedItem();
+        int index = paymentTableView.getSelectionModel().getSelectedIndex();
+        LocalDate date = getDateDatepicker(datePicker);
+        Double amount = checkDouble(textFieldList[3]);
+        String type = getStringComboBoxInput(comboBox);
+        if (p != null && date != null && amount != null && type != null) {
+            double deference = amount - p.getAmount();
+            if (deference > rest.get()) {
+                setAsError(textFieldList[3]);
+                System.out.println("Reduce the amount");
+            } else if (paymentDAOIMPL.update(p, new Payment(null, (long) 0, amount, date, type, sale))) {
+                paymentObservableList.set(index, p);
+                clearButtonClick();
+                paymentTableView.getSelectionModel().clearSelection();
+                payed.set(payed.get() + deference);
+            }
 
+        } else {
+            System.out.println("Non valid input");
+        }
     }
 
     @Override
     protected void deleteButtonClick() {
-
+        Payment p = paymentTableView.getSelectionModel().getSelectedItem();
+        if (p != null) {
+            if (paymentDAOIMPL.delete(p)) {
+                payed.setValue(payed.get() - p.getAmount());
+                paymentObservableList.remove(p);
+                paymentTableView.getSelectionModel().clearSelection();
+            }
+        }
     }
 
+    @Override
+    void clearButtonClick() {
+        for (int i = 0; i < textFieldList.length; i++)
+            if (i != 0 && i != 1 && i != 4)
+                textFieldList[i].clear();
+        try {
+            paymentTableView.getSelectionModel().clearSelection();
+        } catch (NullPointerException ignored) {
+        }
+        datePicker.getEditor().clear();
+        comboBox.getEditor().clear();
+        textFieldList[3].setText(String.valueOf(rest.get()));
+    }
 }
+

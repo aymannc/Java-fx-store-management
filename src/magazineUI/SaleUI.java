@@ -47,6 +47,13 @@ public class SaleUI extends BaseUI {
         });
     }
 
+    public SaleUI(Stage parentStage) {
+        super("Gestion des ventes");
+        mainStage.setOnHiding(event -> {
+            parentStage.show();
+        });
+    }
+
     public SaleUI(String label) {
         super(label);
     }
@@ -67,6 +74,7 @@ public class SaleUI extends BaseUI {
         insertContainer.setMinWidth((Width >> 1));
         labelList[0] = new Label("ID :");
         textFieldList[0] = new TextField();
+        readOnlyTextField(textFieldList[0]);
         labelList[1] = new Label("Client :");
         createClientsTableView();
         labelList[2] = new Label("Ligne de commande :");
@@ -104,7 +112,7 @@ public class SaleUI extends BaseUI {
         ClientUI.createDataView(clientsObservableList, clientTableView);
         clientTableView.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
             if (newSelection != null) {
-                System.out.println("Clicked");
+//                System.out.println(newSelection);
             }
         });
         clientTableView.setMaxHeight(75);
@@ -142,7 +150,6 @@ public class SaleUI extends BaseUI {
         SaleItemUI.createDataView(saleItemObservableList, saleItemTableView);
         saleItemTableView.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
             if (newSelection != null) {
-                System.out.println("Clicked");
             }
         });
         saleItemTableView.setMaxHeight(75);
@@ -178,7 +185,6 @@ public class SaleUI extends BaseUI {
         PaymentUI.createDataView(null, paymentTableView);
         paymentTableView.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
             if (newSelection != null) {
-                System.out.println("Clicked");
             }
         });
         paymentTableView.setMaxHeight(75);
@@ -238,13 +244,15 @@ public class SaleUI extends BaseUI {
         saleTableView.getColumns().addAll(column1, column3, column2, column4);
         saleTableView.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
             if (newSelection != null) {
+                textFieldList[0].setText(String.valueOf(newSelection.getId()));
+                textFieldList[1].setText(String.valueOf(newSelection.getTotal()));
+                clientTableView.getSelectionModel().select(newSelection.getClient());
                 paymentObservableList.clear();
                 saleItemObservableList.clear();
                 try {
                     paymentObservableList.addAll(paymentDAOIMPL.getAll(newSelection));
                     saleItemDAOIMPL.setSale(newSelection);
                     saleItemObservableList.addAll(saleItemDAOIMPL.getAllObsList());
-                    System.out.println(saleItemObservableList.size());
                 } catch (Exception e) {
                     System.out.println(e);
                 }
@@ -254,7 +262,6 @@ public class SaleUI extends BaseUI {
                     System.out.println(e);
                 }
                 textFieldList[1].setText(String.valueOf(newSelection.getTotal()));
-                System.out.println("Clicked");
             }
 
         });
@@ -263,16 +270,49 @@ public class SaleUI extends BaseUI {
 
     @Override
     protected void addButtonClick() {
-
+        Client c = clientTableView.getSelectionModel().getSelectedItem();
+        if (c != null) {
+            Sale s = new Sale(null, c, 0, null, null, null);
+            if (saleDAOIMPL.create(s)) {
+                salesObservableList.add(s);
+                clearButtonClick();
+            }
+        }
     }
 
     @Override
     protected void updateButtonClick() {
-
+        Client c = clientTableView.getSelectionModel().getSelectedItem();
+        Sale sale = saleTableView.getSelectionModel().getSelectedItem();
+        int index = saleTableView.getSelectionModel().getSelectedIndex();
+        if (c != null) {
+            Sale s = new Sale(null, c, 0, null, null, null);
+            if (saleDAOIMPL.update(sale, s)) {
+                salesObservableList.set(index, sale);
+                clearButtonClick();
+            }
+        }
     }
 
     @Override
     protected void deleteButtonClick() {
+        Sale s = saleTableView.getSelectionModel().getSelectedItem();
+        if (saleDAOIMPL.delete(s)) {
+            salesObservableList.remove(s);
+            clearButtonClick();
+        }
+    }
 
+    @Override
+    void clearButtonClick() {
+        for (int i = 0; i < textFieldList.length; i++)
+            textFieldList[i].clear();
+        try {
+            saleTableView.getSelectionModel().clearSelection();
+            saleItemTableView.getSelectionModel().clearSelection();
+            paymentTableView.getSelectionModel().clearSelection();
+        } catch (NullPointerException e) {
+        }
     }
 }
+

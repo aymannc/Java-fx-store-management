@@ -1,8 +1,29 @@
 package clientsManagement;
 
+import java.util.Objects;
+
 public class Client {
     private long id;
     private String name;
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Client client = (Client) o;
+        return id == client.id &&
+                Objects.equals(name, client.name) &&
+                Objects.equals(gender, client.gender) &&
+                Objects.equals(address, client.address) &&
+                Objects.equals(phone, client.phone) &&
+                Objects.equals(email, client.email);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id, name, gender, address, phone, email);
+    }
+
     private String gender;
     private String address;
     private String phone;

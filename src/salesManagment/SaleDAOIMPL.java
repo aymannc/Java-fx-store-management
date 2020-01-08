@@ -6,10 +6,7 @@ import javafx.collections.ObservableList;
 import magazineDAO.MagazineDAO;
 import shared.DataConnection;
 
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -31,7 +28,7 @@ public class SaleDAOIMPL implements MagazineDAO<Sale> {
         try {
             ResultSet resultSet = statement.executeQuery(sql);
             if (resultSet.next()) {
-                return new Sale(resultSet.getInt("id"), clientDAOIMPL.find(resultSet.getLong("client_id")),
+                return new Sale(resultSet.getLong("id"), clientDAOIMPL.find(resultSet.getLong("client_id")),
                         resultSet.getDouble("total"), resultSet.getTimestamp("date_added"),
                         resultSet.getTimestamp("date_modified"), resultSet.getTimestamp("date_deleted"));
             }
@@ -43,19 +40,26 @@ public class SaleDAOIMPL implements MagazineDAO<Sale> {
 
     @Override
     public boolean create(Sale sale) {
-        String sql = String.format("INSERT INTO `sales` (`id`,`total`,`client_id`, `date_added`,`date_modified`,`date_deleted`) VALUES ('%d','%.2f','%d','%s', '%s', '%s')",
-                sale.getId(),
+        String sql = String.format("INSERT INTO `sales` (`total`,`client_id`) VALUES ('%.2f','%d')",
                 sale.getTotal(),
-                sale.getClient().getId(),
-                sale.getDateAdded(),
-                sale.getDateModified(),
-                sale.getDateDeleted());
+                sale.getClient().getId());
+
         try {
-            statement = connection.createStatement();
-            statement.execute(sql);
+            PreparedStatement statement = connection.prepareStatement(sql,
+                    Statement.RETURN_GENERATED_KEYS);
+            int affectedRows = statement.executeUpdate();
+            if (affectedRows == 0) {
+                throw new SQLException("Creating SALE failed, no rows affected.");
+            }
+            try (ResultSet generatedKeys = statement.getGeneratedKeys()) {
+                if (generatedKeys.next()) {
+                    sale.setId(generatedKeys.getLong(1));
+                } else {
+                    throw new SQLException("Creating SALE failed, no ID obtained.");
+                }
+            }
         } catch (SQLException e) {
-            System.out.println("Errors in create");
-            e.printStackTrace();
+            System.out.println("Errors in create" + e.toString());
             return false;
         }
         return true;
@@ -77,12 +81,11 @@ public class SaleDAOIMPL implements MagazineDAO<Sale> {
 
     @Override
     public boolean update(Sale sale1, Sale sale2) {
-        String sql = String.format("UPDATE `sales` SET `client_id` = '%d',`total` = '%.2f',`date_added` = '%s' ,`date_modified`= '%s' ,`date_deleted`= '%s' WHERE `sales`.`id` =%d",
+        String sql;
+
+        sql = String.format("UPDATE `sales` SET `client_id` = '%d',`total` = '%.2f' WHERE `sales`.`id` =%d",
                 sale2.getClient().getId(),
                 sale2.getTotal(),
-                sale2.getDateAdded(),
-                sale2.getDateModified(),
-                sale2.getDateDeleted(),
                 sale1.getId());
 
         try {
@@ -108,7 +111,7 @@ public class SaleDAOIMPL implements MagazineDAO<Sale> {
         try {
             ResultSet resultSet = statement.executeQuery(sql);
             while (resultSet.next()) {
-                Sale s = new Sale(resultSet.getInt("id"), clientDAOIMPL.find(resultSet.getLong("client_id")),
+                Sale s = new Sale(resultSet.getLong("id"), clientDAOIMPL.find(resultSet.getLong("client_id")),
                         resultSet.getDouble("total"), resultSet.getTimestamp("date_added"),
                         resultSet.getTimestamp("date_modified"), resultSet.getTimestamp("date_deleted"));
                 list.add(s);

@@ -10,6 +10,8 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
 
+import java.time.LocalDate;
+
 public abstract class BaseUI {
     protected static int Heigth;
     protected static int Width;
@@ -106,15 +108,7 @@ public abstract class BaseUI {
     protected abstract void deleteButtonClick();
 
 
-    protected void clearButtonClick() {
-        for (int i = 0; i < textFieldList.length; i++)
-            textFieldList[i].clear();
-        try {
-            tableView.getSelectionModel().clearSelection();
-        } catch (NullPointerException e) {
-        }
-//        additionalClears();
-    }
+    abstract void clearButtonClick();
 
 //    protected abstract void additionalClears();
 
@@ -131,6 +125,7 @@ public abstract class BaseUI {
     protected String getStringComboBoxInput(ComboBox comboBox) {
         if (comboBox.getValue() == null) {
             comboBox.setStyle("-fx-border-color: red ;-fx-focus-color: red ;");
+            return null;
         } else {
             comboBox.setStyle("");
         }
@@ -150,13 +145,17 @@ public abstract class BaseUI {
         return null;
     }
 
+    protected void setAsError(TextField textField) {
+        textField.setStyle("-fx-text-box-border: red ;-fx-focus-color: red ;");
+    }
+
     protected Double checkDouble(TextField textField) {
         try {
             double n = Double.parseDouble(textField.getText());
             textField.setStyle("");
             return n;
         } catch (NumberFormatException e) {
-            textField.setStyle("-fx-text-box-border: red ;-fx-focus-color: red ;");
+            setAsError(textField);
             System.out.println(textField.getText() + " is not a Double");
         }
         return null;
@@ -166,6 +165,17 @@ public abstract class BaseUI {
         textField.setMaxWidth(70);
         textField.setDisable(true);
         textField.setStyle("-fx-opacity: 0.8;");
+    }
+
+    protected LocalDate getDateDatepicker(DatePicker datePicker) {
+        LocalDate datePickerValue = datePicker.getValue();
+        if (datePickerValue == null) {
+            datePicker.setStyle("-fx-border-color: red ;-fx-focus-color: red ;");
+            return null;
+        } else {
+            datePicker.setStyle("");
+        }
+        return datePickerValue;
     }
 
 }

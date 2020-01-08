@@ -7,25 +7,17 @@ import java.sql.Timestamp;
 
 public class Sale {
 
-    private long id;
+    private Long id;
     private Client client;
     private double total;
     private Timestamp dateAdded;
     private Timestamp dateModified;
     private Timestamp dateDeleted;
 
-    public Sale(long id, Client client, double total, Timestamp dateAdded, Timestamp dateModified, Timestamp dateDeleted) {
+    public Sale(Long id, Client client, double total, Timestamp dateAdded, Timestamp dateModified, Timestamp dateDeleted) {
         this.id = id;
         this.client = client;
         this.total = total;
-        this.dateAdded = dateAdded;
-        this.dateModified = dateModified;
-        this.dateDeleted = dateDeleted;
-    }
-
-    public Sale(long id, Client client, Timestamp dateAdded, Timestamp dateModified, Timestamp dateDeleted) {
-        this.id = id;
-        this.client = client;
         this.dateAdded = dateAdded;
         this.dateModified = dateModified;
         this.dateDeleted = dateDeleted;
@@ -97,7 +89,6 @@ public class Sale {
     }
 
     public void update(Sale p) {
-        this.id = p.id;
         this.client = p.client;
         this.total = p.total;
         this.dateAdded = p.dateAdded;

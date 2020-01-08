@@ -128,4 +128,15 @@ public class CategoryUI extends BaseUI {
         }
     }
 
+    @Override
+    void clearButtonClick() {
+
+        for (int i = 0; i < textFieldList.length; i++)
+            textFieldList[i].clear();
+        try {
+            tableView.getSelectionModel().clearSelection();
+        } catch (NullPointerException e) {
+        }
+//        additionalClears();
+    }
 }

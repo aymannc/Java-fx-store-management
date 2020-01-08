@@ -43,9 +43,10 @@ public class GuiApp extends Application {
         mainScene = new Scene(container, Width, Heigth);
         mainStage = new Stage();
         mainStage.setScene(mainScene);
-        mainStage.show();
+//        mainStage.show();
+        saleUI = new SaleUI(mainStage);
 //        saleItemUI = new SaleItemUI(saleDAOIMPL.findAll().get(0));
-        paymentUI = new PaymentUI(saleDAOIMPL.findAll().get(0));
+//        paymentUI = new PaymentUI(saleDAOIMPL.findAll().get(0));
         buttonsList[0].setOnMouseClicked(mouseEvent -> {
             mainStage.hide();
             productUI = new ProductUI(buttonsList[0].getText(), mainStage);

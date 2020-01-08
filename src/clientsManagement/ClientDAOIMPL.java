@@ -30,7 +30,7 @@ public class ClientDAOIMPL implements MagazineDAO<Client> {
             if (resultSet.next()) {
                 return new Client(resultSet.getLong("id"), resultSet.getString("full_name"),
                         resultSet.getString("gender"), resultSet.getString("address"),
-                        resultSet.getString("full_name"), resultSet.getString("email"));
+                        resultSet.getString("phone_number"), resultSet.getString("email"));
             }
         } catch (SQLException e) {
             e.printStackTrace();

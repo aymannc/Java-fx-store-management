@@ -2,18 +2,18 @@ package paymentsManagment;
 
 import salesManagment.Sale;
 
-import java.sql.Timestamp;
+import java.time.LocalDate;
 
 public class Payment {
 
-    private long id;
+    private Long id;
     private long num;
     private double amount;
-    private java.sql.Timestamp date;
+    private LocalDate date;
     private String type;
     private Sale sale;
 
-    public Payment(long id, long num, double amount, Timestamp date, String type, Sale sale) {
+    public Payment(Long id, Long num, double amount, LocalDate date, String type, Sale sale) {
         this.id = id;
         this.num = num;
         this.amount = amount;
@@ -72,11 +72,11 @@ public class Payment {
     }
 
 
-    public java.sql.Timestamp getDate() {
+    public LocalDate getDate() {
         return date;
     }
 
-    public void setDate(java.sql.Timestamp date) {
+    public void setDate(LocalDate date) {
         this.date = date;
     }
 
@@ -90,8 +90,6 @@ public class Payment {
     }
 
     public void update(Payment p) {
-        this.id = p.id;
-        this.num = p.num;
         this.amount = p.amount;
         this.date = p.date;
         this.type = p.type;
