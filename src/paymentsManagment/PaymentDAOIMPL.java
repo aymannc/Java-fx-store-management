@@ -7,10 +7,7 @@ import salesManagment.Sale;
 import salesManagment.SaleDAOIMPL;
 import shared.DataConnection;
 
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -32,25 +29,35 @@ public class PaymentDAOIMPL implements MagazineDAO<Payment> {
                             resultSet.getString("type"), saleDAOIMPL.find(resultSet.getLong("sale_id")));
                 }
             } catch (SQLException e) {
-                System.out.println(e);
+                System.out.println(e.toString());
             }
         } catch (Exception e) {
-            System.out.println(e);
+            System.out.println(e.toString());
         }
         return null;
     }
 
     @Override
     public boolean create(Payment p) {
-        System.out.println("Date " + p.getDate());
+        String sql = String.format("INSERT INTO `payments` (`sale_id`, `num`, `amount`, `date`, `type`) VALUES ('%d', '%d', '%s', '%s', '%s')",
+                p.getSale().getId(), p.getNum(), p.getAmount(), p.getDate(), p.getType());
         try {
-            String sql = String.format("INSERT INTO `payments` (`sale_id`, `num`, `amount`, `date`, `type`) VALUES ('%d', '%d', '%s', '%s', '%s')",
-                    p.getSale().getId(), p.getNum(), p.getAmount(), p.getDate(), p.getType());
-            statement = connection.createStatement();
-            statement.execute(sql);
+            PreparedStatement statement = connection.prepareStatement(sql,
+                    Statement.RETURN_GENERATED_KEYS);
+            int affectedRows = statement.executeUpdate();
+            if (affectedRows == 0) {
+                throw new SQLException("Creating payment failed, no rows affected.");
+            }
+            try (ResultSet generatedKeys = statement.getGeneratedKeys()) {
+                if (generatedKeys.next()) {
+                    p.setId(generatedKeys.getLong(1));
+                } else {
+                    throw new SQLException("Creating payment failed, no ID obtained.");
+                }
+            }
         } catch (Exception e) {
             System.out.println("Errors in create");
-//            System.out.println(e);
+//            System.out.println(e.toString());
             e.printStackTrace();
             return false;
         }
@@ -66,7 +73,7 @@ public class PaymentDAOIMPL implements MagazineDAO<Payment> {
             statement.execute(sql);
         } catch (Exception e) {
             System.out.println("Errors in delete");
-            System.out.println(e);
+            e.printStackTrace();
             return false;
         }
         return true;
@@ -81,7 +88,7 @@ public class PaymentDAOIMPL implements MagazineDAO<Payment> {
             statement = connection.createStatement();
             statement.execute(sql);
         } catch (SQLException e) {
-            System.out.println(e);
+            System.out.println(e.toString());
             System.out.println("Errors in update");
             return false;
         }
@@ -102,7 +109,7 @@ public class PaymentDAOIMPL implements MagazineDAO<Payment> {
     }
 
     private ArrayList<Payment> getResult(String sql) {
-        ArrayList<Payment> list = new ArrayList();
+        ArrayList<Payment> list = new ArrayList<>();
         try {
             statement = connection.createStatement();
         } catch (SQLException e) {
@@ -127,7 +134,7 @@ public class PaymentDAOIMPL implements MagazineDAO<Payment> {
     public ObservableList<Payment> getAll() {
         try {
             return FXCollections.observableArrayList(findAll());
-        } catch (NullPointerException e) {
+        } catch (NullPointerException ignored) {
         }
         return null;
     }
@@ -135,7 +142,7 @@ public class PaymentDAOIMPL implements MagazineDAO<Payment> {
     public ObservableList<Payment> getAll(Sale sale) {
         try {
             return FXCollections.observableArrayList(findAll(sale));
-        } catch (NullPointerException e) {
+        } catch (NullPointerException ignored) {
         }
         return null;
     }
@@ -143,7 +150,7 @@ public class PaymentDAOIMPL implements MagazineDAO<Payment> {
     public ObservableList<Payment> getAll(String s) {
         try {
             return FXCollections.observableArrayList(findAll(s));
-        } catch (NullPointerException e) {
+        } catch (NullPointerException ignored) {
         }
         return null;
     }
@@ -153,7 +160,7 @@ public class PaymentDAOIMPL implements MagazineDAO<Payment> {
             String sql = "select * from payments WHERE sale_id = " + sale.getId() + "";
             System.out.println(sql);
             return getResult(sql);
-        } catch (NullPointerException e) {
+        } catch (NullPointerException ignored) {
         }
         return null;
     }
@@ -161,7 +168,7 @@ public class PaymentDAOIMPL implements MagazineDAO<Payment> {
     public double getTotalPayed(Sale sale) {
         try {
             return findAll(sale).stream().mapToDouble(Payment::getAmount).sum();
-        } catch (NullPointerException e) {
+        } catch (NullPointerException ignored) {
             return 0;
         }
     }

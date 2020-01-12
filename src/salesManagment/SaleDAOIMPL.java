@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class SaleDAOIMPL implements MagazineDAO<Sale> {
-    public static final String[] paymentTypes = new String[]{"Virement bancaire", "Espèces", "Chèque"};
+    public static final String[] paymentTypes = new String[]{"Carte bancaire", "Espèces", "Chèque"};
     ClientDAOIMPL clientDAOIMPL = new ClientDAOIMPL();
     private Connection connection = DataConnection.getDataConnection().getConnection();
     private Statement statement;
@@ -68,6 +68,7 @@ public class SaleDAOIMPL implements MagazineDAO<Sale> {
     @Override
     public boolean delete(Sale sale) {
         String sql = "delete from sales where id=" + sale.getId();
+        // delete payments and delete saleitems
 
         try {
             statement = connection.createStatement();
@@ -101,7 +102,7 @@ public class SaleDAOIMPL implements MagazineDAO<Sale> {
     }
 
     private List<Sale> getResult(String sql) {
-        List<Sale> list = new ArrayList<Sale>();
+        List<Sale> list = new ArrayList<>();
         try {
             statement = connection.createStatement();
         } catch (SQLException e) {

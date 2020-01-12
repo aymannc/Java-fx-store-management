@@ -29,7 +29,7 @@ public class GuiApp extends Application {
     }
 
     @Override
-    public void start(Stage stage) throws Exception {
+    public void start(Stage stage) {
         container = new VBox(Heigth / 10.0);
         container.setAlignment(Pos.CENTER);
         buttonsList[0] = new Button("Gestion des produits");
@@ -44,9 +44,9 @@ public class GuiApp extends Application {
         mainStage = new Stage();
         mainStage.setScene(mainScene);
 //        mainStage.show();
-        saleUI = new SaleUI(mainStage);
+//        saleUI = new SaleUI(mainStage);
 //        saleItemUI = new SaleItemUI(saleDAOIMPL.findAll().get(0));
-//        paymentUI = new PaymentUI(saleDAOIMPL.findAll().get(0));
+        paymentUI = new PaymentUI(saleDAOIMPL.findAll().get(1));
         buttonsList[0].setOnMouseClicked(mouseEvent -> {
             mainStage.hide();
             productUI = new ProductUI(buttonsList[0].getText(), mainStage);

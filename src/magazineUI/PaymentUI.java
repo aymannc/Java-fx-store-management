@@ -1,5 +1,8 @@
 package magazineUI;
 
+import bank.Account;
+import bank.AccountDAOIMPL;
+import bank.CardUI;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
@@ -13,6 +16,7 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.util.StringConverter;
 import javafx.util.converter.DoubleStringConverter;
+import org.jetbrains.annotations.NotNull;
 import paymentsManagment.Payment;
 import paymentsManagment.PaymentDAOIMPL;
 import salesManagment.Sale;
@@ -24,10 +28,11 @@ import java.util.ArrayList;
 public class PaymentUI extends BaseUI {
     PaymentDAOIMPL paymentDAOIMPL;
     SaleDAOIMPL saleDAOIMPL;
+    AccountDAOIMPL accountDAOIMPL;
     ObservableList<Payment> paymentObservableList;
     TableView<Payment> paymentTableView;
     DatePicker datePicker;
-    ComboBox comboBox;
+    ComboBox<String> comboBox;
 
     Sale sale;
 
@@ -37,17 +42,13 @@ public class PaymentUI extends BaseUI {
 
     public PaymentUI(String label, Stage parentStage, Sale sale) {
         super(label);
-        mainStage.setOnHiding(event -> {
-            parentStage.show();
-        });
+        mainStage.setOnHiding(event -> parentStage.show());
         this.sale = sale;
     }
 
     public PaymentUI(Stage parentStage, Sale sale) {
         super("Gestion des payments");
-        mainStage.setOnHiding(event -> {
-            parentStage.show();
-        });
+        mainStage.setOnHiding(event -> parentStage.show());
         this.sale = sale;
         initTableViewData();
     }
@@ -88,7 +89,7 @@ public class PaymentUI extends BaseUI {
         } catch (NullPointerException e) {
             System.out.println("Products list empty");
         }
-        tableView.setMaxHeight(3 * Heigth / 5);
+        tableView.setMaxHeight(3 * Heigth / 5.0);
     }
 
     private void initTableViewData() {
@@ -138,7 +139,7 @@ public class PaymentUI extends BaseUI {
         labelList[4] = new Label("Montant :");
         textFieldList[3] = new TextField();
         labelList[5] = new Label("Type :");
-        comboBox = new ComboBox(FXCollections.observableArrayList(SaleDAOIMPL.paymentTypes));
+        comboBox = new ComboBox<>(FXCollections.observableArrayList(SaleDAOIMPL.paymentTypes));
 
         StringConverter<? extends Number> converter = new DoubleStringConverter();
         Bindings.bindBidirectional(textFieldList[1].textProperty(), rest, (StringConverter<Number>) converter);
@@ -191,7 +192,7 @@ public class PaymentUI extends BaseUI {
     @Override
     protected void addButtonClick() {
         if (rest.getValue() > 0) {
-            long num = 0;
+            long num = 1;
             try {
                 num = paymentObservableList.get(paymentObservableList.size() - 1).getNum() + 1;
             } catch (Exception ignored) {
@@ -207,9 +208,13 @@ public class PaymentUI extends BaseUI {
                 } else {
                     Payment p = new Payment(null, num, amount, date, type, sale);
                     if (paymentDAOIMPL.create(p)) {
-                        paymentObservableList.add(p);
-                        clearButtonClick();
-                        payed.set(payed.get() + amount);
+                        if (!checkPaymentType(p))
+                            paymentDAOIMPL.delete(p);
+                        else {
+                            paymentObservableList.add(p);
+                            clearButtonClick();
+                            payed.set(payed.get() + amount);
+                        }
                     }
                 }
             } else {
@@ -218,6 +223,26 @@ public class PaymentUI extends BaseUI {
         } else {
             System.out.println("Already payed");
         }
+    }
+
+    private boolean checkPaymentType(@NotNull Payment p) {
+        if (p.getType().equals(SaleDAOIMPL.paymentTypes[0])) {
+            CardUI c = new CardUI();
+            c.showStage();
+            String account_number = c.getData();
+            System.out.println(account_number);
+            if (account_number == null)
+                return false;
+            accountDAOIMPL = new AccountDAOIMPL();
+            Account a = accountDAOIMPL.find(account_number);
+            if (a != null) {
+                boolean response = accountDAOIMPL.draw(a, p.getAmount());
+                System.out.println(response ? "Successful" : "No founds available");
+                return response;
+            } else
+                return false;
+        }
+        return true;
     }
 
 

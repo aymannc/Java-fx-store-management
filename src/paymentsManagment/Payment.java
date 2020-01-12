@@ -8,12 +8,12 @@ public class Payment {
 
     private Long id;
     private long num;
-    private double amount;
+    private Double amount;
     private LocalDate date;
     private String type;
     private Sale sale;
 
-    public Payment(Long id, Long num, double amount, LocalDate date, String type, Sale sale) {
+    public Payment(Long id, Long num, Double amount, LocalDate date, String type, Sale sale) {
         this.id = id;
         this.num = num;
         this.amount = amount;
@@ -63,7 +63,7 @@ public class Payment {
     }
 
 
-    public double getAmount() {
+    public Double getAmount() {
         return amount;
     }
 
