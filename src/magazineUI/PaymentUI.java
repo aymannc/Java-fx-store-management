@@ -140,7 +140,7 @@ public class PaymentUI extends BaseUI {
         textFieldList[2] = new TextField();
         readOnlyTextField(textFieldList[2]);
         labelList[3] = new Label("Date :");
-        datePicker = new DatePicker();
+        datePicker = new DatePicker(LocalDate.now());
         labelList[4] = new Label("Montant :");
         textFieldList[3] = new TextField();
         labelList[5] = new Label("Type :");
@@ -222,10 +222,10 @@ public class PaymentUI extends BaseUI {
                     }
                 }
             } else {
-                System.out.println("Non valid input");
+                showAlert(Alert.AlertType.ERROR, "Non valid input");
             }
         } else {
-            System.out.println("Already payed");
+            showAlert(Alert.AlertType.ERROR, "Already payed");
         }
     }
 
