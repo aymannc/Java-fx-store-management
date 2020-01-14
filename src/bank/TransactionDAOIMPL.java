@@ -13,7 +13,7 @@ public class TransactionDAOIMPL implements MagazineDAO<Transaction> {
     @Override
     public boolean create(Transaction p) {
         System.out.println(p);
-        return false;
+        return true;
     }
 
     @Override

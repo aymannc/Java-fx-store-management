@@ -1,8 +1,6 @@
 package magazineUI;
 
-import bank.Account;
-import bank.AccountDAOIMPL;
-import bank.CardUI;
+import bank.*;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
@@ -22,6 +20,10 @@ import paymentsManagment.PaymentDAOIMPL;
 import salesManagment.Sale;
 import salesManagment.SaleDAOIMPL;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.net.Socket;
 import java.time.LocalDate;
 import java.util.ArrayList;
 
@@ -33,8 +35,11 @@ public class PaymentUI extends BaseUI {
     TableView<Payment> paymentTableView;
     DatePicker datePicker;
     ComboBox<String> comboBox;
-
     Sale sale;
+    Socket socket;
+    ObjectOutputStream outputStream;
+    ObjectInputStream inputStream;
+    Account account;
 
     private DoubleProperty total;
     private DoubleProperty payed;
@@ -200,11 +205,10 @@ public class PaymentUI extends BaseUI {
             LocalDate date = getDateDatepicker(datePicker);
             Double amount = checkDouble(textFieldList[3]);
             String type = getStringComboBoxInput(comboBox);
-            System.out.println(date);
             if (date != null && amount != null && type != null) {
                 if (amount > rest.get()) {
                     setAsError(textFieldList[3]);
-                    System.out.println("Reduce the amount");
+                    showAlert(Alert.AlertType.ERROR, "Reduce the amount");
                 } else {
                     Payment p = new Payment(null, num, amount, date, type, sale);
                     if (paymentDAOIMPL.create(p)) {
@@ -233,16 +237,59 @@ public class PaymentUI extends BaseUI {
             System.out.println(account_number);
             if (account_number == null)
                 return false;
-            accountDAOIMPL = new AccountDAOIMPL();
-            Account a = accountDAOIMPL.find(account_number);
-            if (a != null) {
-                boolean response = accountDAOIMPL.draw(a, p.getAmount());
-                System.out.println(response ? "Successful" : "No founds available");
-                return response;
-            } else
-                return false;
+            account = new Account(account_number);
+            boolean valid = sendRequest(account);
+            if (valid) {
+                valid = getResponse();
+                if (valid) {
+                    Transaction transaction = new Transaction(p.getAmount(), account);
+                    valid = sendRequest(transaction);
+                    if (valid)
+                        valid = getResponse();
+                }
+            }
+            return valid;
         }
         return true;
+    }
+
+    private boolean sendRequest(Object o) {
+        boolean valid = false;
+        try {
+            socket = new Socket(BankServer.domain, BankServer.port);
+            outputStream = new ObjectOutputStream(socket.getOutputStream());
+            outputStream.writeObject(o);
+            valid = true;
+        } catch (IOException e) {
+            showAlert(Alert.AlertType.ERROR, e.getMessage());
+            e.printStackTrace();
+        }
+        return valid;
+    }
+
+    private boolean getResponse() {
+        boolean valid = true;
+        try {
+            inputStream = new ObjectInputStream(socket.getInputStream());
+            Object o = inputStream.readObject();
+            if (o instanceof Account) {
+                account = (Account) o;
+//                showAlert(Alert.AlertType.INFORMATION, account.getNumber() + " - " + account.getBalance());
+            }
+            if (o instanceof Boolean) {
+                boolean response = (boolean) o;
+                showAlert(Alert.AlertType.INFORMATION, response ? "Successful transaction !" : "Not enough funds");
+            } else if (o == null) {
+                account = null;
+                showAlert(Alert.AlertType.ERROR, "Error getting account");
+                valid = false;
+            }
+        } catch (IOException | ClassNotFoundException e) {
+            valid = false;
+            showAlert(Alert.AlertType.ERROR, e.getMessage());
+            e.printStackTrace();
+        }
+        return valid;
     }
 
 
@@ -252,18 +299,18 @@ public class PaymentUI extends BaseUI {
         int index = paymentTableView.getSelectionModel().getSelectedIndex();
         LocalDate date = getDateDatepicker(datePicker);
         Double amount = checkDouble(textFieldList[3]);
-        String type = getStringComboBoxInput(comboBox);
-        if (p != null && date != null && amount != null && type != null) {
+        if (p != null && date != null && amount != null) {
             double deference = amount - p.getAmount();
             if (deference > rest.get()) {
                 setAsError(textFieldList[3]);
                 System.out.println("Reduce the amount");
-            } else if (paymentDAOIMPL.update(p, new Payment(null, (long) 0, amount, date, type, sale))) {
-                paymentObservableList.set(index, p);
-                clearButtonClick();
-                paymentTableView.getSelectionModel().clearSelection();
-                payed.set(payed.get() + deference);
-            }
+            } else if (showAlert(Alert.AlertType.WARNING, "Do you want to update ?") == ButtonType.OK)
+                if (paymentDAOIMPL.update(p, new Payment(null, (long) 0, amount, date, p.getType(), sale))) {
+                    paymentObservableList.set(index, p);
+                    clearButtonClick();
+                    paymentTableView.getSelectionModel().clearSelection();
+                    payed.set(payed.get() + deference);
+                }
 
         } else {
             System.out.println("Non valid input");
@@ -274,11 +321,12 @@ public class PaymentUI extends BaseUI {
     protected void deleteButtonClick() {
         Payment p = paymentTableView.getSelectionModel().getSelectedItem();
         if (p != null) {
-            if (paymentDAOIMPL.delete(p)) {
-                payed.setValue(payed.get() - p.getAmount());
-                paymentObservableList.remove(p);
-                paymentTableView.getSelectionModel().clearSelection();
-            }
+            if (showAlert(Alert.AlertType.WARNING, "Do you want to delete ?") == ButtonType.OK)
+                if (paymentDAOIMPL.delete(p)) {
+                    payed.setValue(payed.get() - p.getAmount());
+                    paymentObservableList.remove(p);
+                    paymentTableView.getSelectionModel().clearSelection();
+                }
         }
     }
 

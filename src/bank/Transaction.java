@@ -1,9 +1,10 @@
 package bank;
 
+import java.io.Serializable;
 import java.time.LocalDate;
 import java.util.Objects;
 
-public class Transaction {
+public class Transaction implements Serializable {
     private long id;
     private double amount;
     private LocalDate date;
@@ -13,6 +14,11 @@ public class Transaction {
         this.id = id;
         this.amount = amount;
         this.date = date;
+        this.account = account;
+    }
+
+    public Transaction(double amount, Account account) {
+        this.amount = amount;
         this.account = account;
     }
 

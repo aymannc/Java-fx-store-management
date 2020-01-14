@@ -7,6 +7,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import salesManagment.Sale;
 import salesManagment.SaleDAOIMPL;
 
 public class GuiApp extends Application {
@@ -46,7 +47,9 @@ public class GuiApp extends Application {
 //        mainStage.show();
 //        saleUI = new SaleUI(mainStage);
 //        saleItemUI = new SaleItemUI(saleDAOIMPL.findAll().get(0));
-        paymentUI = new PaymentUI(saleDAOIMPL.findAll().get(1));
+        Sale s = saleDAOIMPL.findAll().get(1);
+        System.out.println(s);
+        paymentUI = new PaymentUI(s);
         buttonsList[0].setOnMouseClicked(mouseEvent -> {
             mainStage.hide();
             productUI = new ProductUI(buttonsList[0].getText(), mainStage);

@@ -74,8 +74,8 @@ public abstract class BaseUI {
         buttonsList[1] = new Button("Update");
         buttonsList[2] = new Button("Delete");
         buttonsList[3] = new Button("Clear");
-        for (int i = 0; i < buttonsList.length; i++) {
-            buttonsList[i].setPrefWidth((Width / 6.0) - 20);
+        for (Button button : buttonsList) {
+            button.setPrefWidth((Width / 6.0) - 20);
         }
         buttonsContainer.getChildren().addAll(buttonsList[0], buttonsList[1], buttonsList[2], buttonsList[3]);
     }
@@ -87,18 +87,10 @@ public abstract class BaseUI {
     protected abstract void createDataView();
 
     protected void addButtonsFunctionality() {
-        buttonsList[0].setOnMouseClicked(event -> {
-            addButtonClick();
-        });
-        buttonsList[1].setOnMouseClicked(event -> {
-            updateButtonClick();
-        });
-        buttonsList[2].setOnMouseClicked(event -> {
-            deleteButtonClick();
-        });
-        buttonsList[3].setOnMouseClicked(event -> {
-            clearButtonClick();
-        });
+        buttonsList[0].setOnMouseClicked(event -> addButtonClick());
+        buttonsList[1].setOnMouseClicked(event -> updateButtonClick());
+        buttonsList[2].setOnMouseClicked(event -> deleteButtonClick());
+        buttonsList[3].setOnMouseClicked(event -> clearButtonClick());
     }
 
     protected abstract void addButtonClick();
@@ -112,24 +104,24 @@ public abstract class BaseUI {
 
 //    protected abstract void additionalClears();
 
-    protected Category getCategoryComboBoxInput(ComboBox comboBox) {
+    protected Category getCategoryComboBoxInput(ComboBox<Category> comboBox) {
         if (comboBox.getValue() == null) {
             comboBox.setStyle("-fx-border-color: red ;-fx-focus-color: red ;");
         } else {
             comboBox.setStyle("");
         }
-        return (Category) comboBox.getValue();
+        return comboBox.getValue();
 
     }
 
-    protected String getStringComboBoxInput(ComboBox comboBox) {
+    protected String getStringComboBoxInput(ComboBox<String> comboBox) {
         if (comboBox.getValue() == null) {
             comboBox.setStyle("-fx-border-color: red ;-fx-focus-color: red ;");
             return null;
         } else {
             comboBox.setStyle("");
         }
-        return (String) comboBox.getValue();
+        return comboBox.getValue();
 
     }
 
@@ -176,6 +168,12 @@ public abstract class BaseUI {
             datePicker.setStyle("");
         }
         return datePickerValue;
+    }
+
+    protected ButtonType showAlert(Alert.AlertType alertType, String s) {
+        Alert alert = new Alert(alertType, s, ButtonType.OK, ButtonType.CANCEL);
+        alert.showAndWait();
+        return alert.getResult();
     }
 
 }

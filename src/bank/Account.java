@@ -1,8 +1,9 @@
 package bank;
 
+import java.io.Serializable;
 import java.util.Objects;
 
-public class Account {
+public class Account implements Serializable {
     private long id;
     private String number;
     private float balance;
@@ -11,6 +12,10 @@ public class Account {
         this.id = id;
         this.number = number;
         this.balance = balance;
+    }
+
+    public Account(String number) {
+        this.number = number;
     }
 
     @Override
@@ -62,7 +67,7 @@ public class Account {
     }
 
     public void update(Account a2) {
-        this.number = a2.number;
+//        this.number = a2.number;
         this.balance = a2.balance;
     }
 }
