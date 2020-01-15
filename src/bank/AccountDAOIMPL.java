@@ -6,7 +6,6 @@ import magazineDAO.MagazineDAO;
 import shared.DataConnection;
 
 import java.sql.*;
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -86,9 +85,7 @@ public class AccountDAOIMPL implements MagazineDAO<Account> {
 
     @Override
     public boolean update(Account a1, Account a2) {
-        System.out.println("updateezzzed" + a1 + a2);
         String sql = String.format("UPDATE `accounts` SET `balance`= '%s' WHERE `accounts`.`id` =%d", a2.getBalance(), a1.getId());
-
         try {
             statement = connection.createStatement();
             statement.execute(sql);
@@ -99,7 +96,6 @@ public class AccountDAOIMPL implements MagazineDAO<Account> {
         }
 //        a1.setBalance();
         a1.update(a2);
-        System.out.println("updateezzzed" + a1 + a2);
         return true;
     }
 
@@ -152,22 +148,12 @@ public class AccountDAOIMPL implements MagazineDAO<Account> {
         return null;
     }
 
-    public boolean draw(Transaction t) {
-        System.out.println(t.getAccount().getBalance() + " - " + t.getAccount().getBalance());
-        Account a = t.getAccount();
-        float v = t.getAccount().getBalance();
-        float new_balance = (float) (a.getBalance() - t.getAmount());
-        if (new_balance >= 0) {
-            if (update(a, new Account(0, "", new_balance))) {
-                transactionDAOIMPL = new TransactionDAOIMPL();
-                if (transactionDAOIMPL.create(new Transaction(0, t.getAccount().getBalance(), LocalDate.now(), t.getAccount())))
-                    return true;
-                else {
-                    update(t.getAccount(), new Account(t.getAccount().getId(), t.getAccount().getNumber(), (float) (new_balance + t.getAmount())));
-                    return false;
-                }
-            }
+    public Response draw(Transaction t) {
+        transactionDAOIMPL = new TransactionDAOIMPL();
+        if (transactionDAOIMPL.create(t))
+            return new Response(201, "Successful transaction");
+        else {
+            return new Response(500, "Could't create the transaction");
         }
-        return false;
     }
 }

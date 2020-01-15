@@ -11,9 +11,14 @@ public class TransactionDAOIMPL implements MagazineDAO<Transaction> {
     }
 
     @Override
-    public boolean create(Transaction p) {
-        System.out.println(p);
-        return true;
+    public boolean create(Transaction t) {
+        AccountDAOIMPL accountDAOIMPL = new AccountDAOIMPL();
+        System.out.println(t.getAccount().getBalance() + " - " + t.getAmount());
+        Account a = t.getAccount();
+        float new_balance = (float) (a.getBalance() - t.getAmount());
+        if (new_balance >= 0)
+            return accountDAOIMPL.update(a, new Account(0, "", new_balance));
+        return false;
     }
 
     @Override

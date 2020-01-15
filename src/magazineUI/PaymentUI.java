@@ -28,7 +28,9 @@ import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class PaymentUI extends BaseUI {
     PaymentDAOIMPL paymentDAOIMPL;
@@ -38,11 +40,11 @@ public class PaymentUI extends BaseUI {
     TableView<Payment> paymentTableView;
     DatePicker datePicker;
     ComboBox<String> comboBox;
+    ComboBox<String> comboBox2;
     Sale sale;
     Socket socket;
     ObjectOutputStream outputStream;
     ObjectInputStream inputStream;
-    Account account;
 
     private DoubleProperty total;
     private DoubleProperty payed;
@@ -111,8 +113,8 @@ public class PaymentUI extends BaseUI {
         }
         FilteredList<Payment> filteredList = new FilteredList<>(paymentObservableList);
         paymentTableView.setItems(filteredList);
-        textFieldList[5].textProperty().addListener((observable, oldValue, newValue) ->
-                filteredList.setPredicate(newValue == null || newValue.length() == 0 ? s -> true : s -> s.getType().
+        comboBox2.valueProperty().addListener((observable, oldValue, newValue) ->
+                filteredList.setPredicate(newValue.equals("All") ? s -> true : s -> s.getType().
                         toLowerCase().contains(newValue.toLowerCase()))
         );
         total.set(sale.getTotal());
@@ -128,7 +130,7 @@ public class PaymentUI extends BaseUI {
         rest = new SimpleDoubleProperty();
         saleDAOIMPL = new SaleDAOIMPL();
         labelList = new Label[8];
-        textFieldList = new TextField[6];
+        textFieldList = new TextField[5];
         insertContainer = new VBox(10);
         insertContainer.setMinWidth(Width / 3.0 - 20);
         labelList[0] = new Label("Total : ");
@@ -168,9 +170,12 @@ public class PaymentUI extends BaseUI {
         tableContainer = new VBox(30);
         tableContainer.setMinWidth(Width >> 1);
         labelList[6] = new Label("Search for :(type)");
-        textFieldList[5] = new TextField();
+        ArrayList<String> cl = new ArrayList<>(List.of(SaleDAOIMPL.paymentTypes));
+        cl.add(0, "All");
+        comboBox2 = new ComboBox<>(FXCollections.observableArrayList(cl));
+        comboBox2.getSelectionModel().selectFirst();
         createDataView();
-        tableContainer.getChildren().addAll(labelList[6], textFieldList[5], paymentTableView);
+        tableContainer.getChildren().addAll(labelList[6], comboBox2, paymentTableView);
 
     }
 
@@ -217,7 +222,7 @@ public class PaymentUI extends BaseUI {
                     setAsError(textFieldList[3]);
                     showAlert(Alert.AlertType.ERROR, "Reduce the amount");
                 } else {
-                    Payment p = new Payment(null, num, amount, date, type, Payment.paymentsStates[0], "---", sale);
+                    Payment p = new Payment(null, num, amount, date, type, Payment.paymentsStates[0], "------", sale);
                     if (paymentDAOIMPL.create(p)) {
                         if (!checkPaymentType(p))
                             paymentDAOIMPL.delete(p);
@@ -244,16 +249,22 @@ public class PaymentUI extends BaseUI {
             System.out.println(account_number);
             if (account_number == null)
                 return false;
-            account = new Account(account_number);
-            boolean valid = sendRequest(account);
+//            account = new Account(account_number);
+//            boolean valid = sendRequest(account);
+//            if (valid) {
+//                valid = getResponse();
+//                if (valid) {
+//                    Transaction transaction = new Transaction(p.getAmount(), account);
+//                    valid = sendRequest(transaction);
+//                    if (valid)
+//                        valid = getResponse();
+//                }
+//            }
+//            return valid;
+            Transaction transaction = new Transaction(p.getAmount(), new Account(account_number));
+            boolean valid = sendRequest(transaction);
             if (valid) {
                 valid = getResponse();
-                if (valid) {
-                    Transaction transaction = new Transaction(p.getAmount(), account);
-                    valid = sendRequest(transaction);
-                    if (valid)
-                        valid = getResponse();
-                }
             }
             return valid;
         }
@@ -279,12 +290,9 @@ public class PaymentUI extends BaseUI {
             if (result.isPresent()) {
                 int number = checkInt(result.get());
                 double amount = p.getAmount() / number;
-                LocalDate date = p.getDate().minusMonths(1);
-                System.out.println(date);
-                System.out.println(date.plusMonths(2));
                 for (int i = 0; i < number; i++) {
-                    Payment payment = new Payment((long) 0, i + 1, amount, date.plusMonths(1),
-                            SaleDAOIMPL.paymentTypes[2], Payment.paymentsStates[1], "-----", p.getSale());
+                    Payment payment = new Payment((long) 0, p.getNum() + i, amount, LocalDate.now().plusMonths(i),
+                            SaleDAOIMPL.paymentTypes[3], Payment.paymentsStates[1], "------", p.getSale());
                     if (paymentDAOIMPL.create(payment)) {
                         paymentObservableList.add(payment);
                         clearButtonClick();
@@ -299,15 +307,16 @@ public class PaymentUI extends BaseUI {
     }
 
     private boolean sendRequest(Object o) {
-        boolean valid = false;
+        boolean valid = true;
         try {
             socket = new Socket(BankServer.domain, BankServer.port);
             outputStream = new ObjectOutputStream(socket.getOutputStream());
             outputStream.writeObject(o);
-            valid = true;
+
         } catch (IOException e) {
-            showAlert(Alert.AlertType.ERROR, e.getMessage());
+            showAlert(Alert.AlertType.ERROR, "500 Internal Server Error : " + e.getMessage());
             e.printStackTrace();
+            valid = false;
         }
         return valid;
     }
@@ -317,17 +326,8 @@ public class PaymentUI extends BaseUI {
         try {
             inputStream = new ObjectInputStream(socket.getInputStream());
             Object o = inputStream.readObject();
-            if (o instanceof Account) {
-                account = (Account) o;
-//                showAlert(Alert.AlertType.INFORMATION, account.getNumber() + " - " + account.getBalance());
-            }
-            if (o instanceof Boolean) {
-                boolean response = (boolean) o;
-                showAlert(Alert.AlertType.INFORMATION, response ? "Successful transaction !" : "Not enough funds");
-            } else if (o == null) {
-                account = null;
-                showAlert(Alert.AlertType.ERROR, "Error getting account");
-                valid = false;
+            if (o instanceof Response) {
+                valid = responseType((Response) o);
             }
         } catch (IOException | ClassNotFoundException e) {
             valid = false;
@@ -337,10 +337,20 @@ public class PaymentUI extends BaseUI {
         return valid;
     }
 
+    boolean responseType(Response r) {
+
+        if (r.getCode() >= 400) {
+            showAlert(Alert.AlertType.ERROR, r.getCode() + " : " + r.getBody());
+        } else if (r.getCode() >= 200) {
+            showAlert(Alert.AlertType.INFORMATION, r.getCode() + " : " + r.getBody());
+            return true;
+        }
+        return false;
+    }
 
     @Override
     protected void updateButtonClick() {
-        boolean DoIt = false;
+        AtomicBoolean DoIt = new AtomicBoolean(false);
         Payment p = paymentTableView.getSelectionModel().getSelectedItem();
         Payment p2 = p;
         double deference = 0;
@@ -363,13 +373,28 @@ public class PaymentUI extends BaseUI {
                 Platform.runLater(textField::requestFocus);
                 dialog.setResultConverter((ButtonType button) -> {
                     if (button == ButtonType.OK) {
-                        return new Payment(p.getId(), p.getNum(), p.getAmount(), date, p.getType(), comboBox.getSelectionModel().getSelectedItem(), textField.getText(), sale);
+                        String s = textField.getText().equals("") ? "------" : textField.getText();
+                        return new Payment(p.getId(), p.getNum(), p.getAmount(), date, p.getType(), comboBox.getSelectionModel().getSelectedItem(), s, sale);
                     }
                     return null;
                 });
                 p2 = dialog.showAndWait().orElse(null);
                 if (p2 != null)
-                    DoIt = showAlert(Alert.AlertType.WARNING, "Do you want to update ?") == ButtonType.OK;
+                    DoIt.set(showAlert(Alert.AlertType.WARNING, "Do you want to update ?") == ButtonType.OK);
+            } else if (p.getType().equals(SaleDAOIMPL.paymentTypes[3])) {
+                List<String> choices = new ArrayList<>();
+                choices.add(SaleDAOIMPL.paymentTypes[1]);
+                choices.add(SaleDAOIMPL.paymentTypes[2]);
+                ChoiceDialog<String> dialog = new ChoiceDialog<>(SaleDAOIMPL.paymentTypes[1], choices);
+                dialog.setTitle("Choose a payment type");
+                dialog.setContentText("Choose a payment:");
+                Optional<String> result = dialog.showAndWait();
+                result.ifPresent(type -> {
+                    if (type.equals(SaleDAOIMPL.paymentTypes[1]))
+                        p.setState(Payment.paymentsStates[0]);
+                    p.setType(type);
+                    DoIt.set(showAlert(Alert.AlertType.WARNING, "Do you want to update ?") == ButtonType.OK);
+                });
             } else {
                 Double amount = checkDouble(textFieldList[3]);
                 if (amount != null) {
@@ -379,13 +404,14 @@ public class PaymentUI extends BaseUI {
                         showAlert(Alert.AlertType.ERROR, "Reduce the amount");
                     } else {
                         p2 = new Payment(null, 0, amount, date, p.getType(), p.getState(), p.getChecknumber(), sale);
-                        DoIt = showAlert(Alert.AlertType.WARNING, "Do you want to update ?") == ButtonType.OK;
+                        DoIt.set(showAlert(Alert.AlertType.WARNING, "Do you want to update ?") == ButtonType.OK);
                     }
                 } else {
                     showAlert(Alert.AlertType.ERROR, "Non valid input");
                 }
             }
-            if (DoIt)
+
+            if (DoIt.get())
                 if (paymentDAOIMPL.update(p, p2)) {
                     paymentObservableList.set(index, p);
                     clearButtonClick();
@@ -410,9 +436,8 @@ public class PaymentUI extends BaseUI {
 
     @Override
     void clearButtonClick() {
-        for (int i = 0; i < textFieldList.length; i++)
-            if (i != 0 && i != 1 && i != 4)
-                textFieldList[i].clear();
+        textFieldList[2].clear();
+        textFieldList[3].clear();
         try {
             paymentTableView.getSelectionModel().clearSelection();
         } catch (NullPointerException ignored) {

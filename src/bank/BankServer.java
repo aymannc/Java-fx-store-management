@@ -79,22 +79,27 @@ public class BankServer {
         }
 
         private void sendResponse(boolean valid) {
+            Response response = new Response();
             try {
                 outputStream = new ObjectOutputStream(socket.getOutputStream());
                 accountDAOIMPL = new AccountDAOIMPL();
-                if (!valid)
-                    outputStream.writeObject("Error");
-                else {
+                if (!valid) {
+                    response.setCode(400);
+                    response.setBody("Bad Request");
+                } else {
                     accountDAOIMPL = new AccountDAOIMPL();
                     if (o instanceof Transaction) {
-                        boolean response = accountDAOIMPL.draw((Transaction) o);
-                        outputStream.writeObject(response);
-                    } else if (o instanceof Account) {
-                        o = accountDAOIMPL.find(((Account) o).getNumber());
-                        outputStream.writeObject(o);
+                        Account a = accountDAOIMPL.find(((Transaction) o).getAccount().getNumber());
+                        if (a != null) {
+                            ((Transaction) o).setAccount(a);
+                            response = accountDAOIMPL.draw((Transaction) o);
+                        } else {
+                            response.setCode(404);
+                            response.setBody("Invalid credit card number");
+                        }
                     }
+                    outputStream.writeObject(response);
                 }
-
             } catch (IOException e) {
                 e.printStackTrace();
             }
