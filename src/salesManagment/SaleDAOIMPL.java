@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class SaleDAOIMPL implements MagazineDAO<Sale> {
-    public static final String[] paymentTypes = new String[]{"Carte bancaire", "Espèces", "Chèque"};
+    public static final String[] paymentTypes = new String[]{"Carte bancaire", "Espèces", "Chèque", "Traite"};
     ClientDAOIMPL clientDAOIMPL = new ClientDAOIMPL();
     private Connection connection = DataConnection.getDataConnection().getConnection();
     private Statement statement;

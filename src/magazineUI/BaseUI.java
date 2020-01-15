@@ -125,6 +125,14 @@ public abstract class BaseUI {
 
     }
 
+    protected int checkInt(String number) {
+        try {
+            return Integer.parseInt(number);
+        } catch (NumberFormatException e) {
+            return 3;
+        }
+    }
+
     protected Long checkLong(TextField textField) {
         try {
             long n = Long.parseLong(textField.getText());

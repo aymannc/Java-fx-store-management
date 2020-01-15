@@ -1,6 +1,7 @@
 package magazineUI;
 
 import bank.*;
+import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
@@ -12,6 +13,7 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import javafx.stage.StageStyle;
 import javafx.util.StringConverter;
 import javafx.util.converter.DoubleStringConverter;
 import org.jetbrains.annotations.NotNull;
@@ -26,6 +28,7 @@ import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Optional;
 
 public class PaymentUI extends BaseUI {
     PaymentDAOIMPL paymentDAOIMPL;
@@ -72,23 +75,27 @@ public class PaymentUI extends BaseUI {
 
     public static void createDataView(ObservableList<Payment> observableList,
                                       TableView<Payment> tableView) {
-        TableColumn<Payment, Long> column0 = new TableColumn<>("ID vent");
-        column0.setCellValueFactory(new PropertyValueFactory<>("saleID"));
+
         TableColumn<Payment, Long> column1 = new TableColumn<>("N°");
         column1.setCellValueFactory(new PropertyValueFactory<>("num"));
         TableColumn<Payment, Double> column2 = new TableColumn<>("Montatnt");
         column2.setCellValueFactory(new PropertyValueFactory<>("amount"));
         TableColumn<Payment, String> column3 = new TableColumn<>("Type");
         column3.setCellValueFactory(new PropertyValueFactory<>("type"));
-        TableColumn<Payment, String> column4 = new TableColumn<>("Date");
-        column4.setCellValueFactory(new PropertyValueFactory<>("date"));
+        TableColumn<Payment, String> column4 = new TableColumn<>("N° Chèque");
+        column4.setCellValueFactory(new PropertyValueFactory<>("checknumber"));
+        TableColumn<Payment, String> column5 = new TableColumn<>("Etat");
+        column5.setCellValueFactory(new PropertyValueFactory<>("state"));
+        TableColumn<Payment, String> column6 = new TableColumn<>("Date");
+        column6.setCellValueFactory(new PropertyValueFactory<>("date"));
 
-        column0.setPrefWidth(Width / 10.0 - 10);
-        column1.setPrefWidth(Width / 10.0 - 10);
-        column2.setPrefWidth(Width / 10.0);
-        column3.setPrefWidth(Width / 10.0);
-        column4.setPrefWidth(Width / 10.0 + 10);
-        tableView.getColumns().addAll(column1, column0, column2, column3, column4);
+        column1.setPrefWidth(Width / 12.0 - 10);
+        column2.setPrefWidth(Width / 12.0);
+        column3.setPrefWidth(Width / 12.0);
+        column4.setPrefWidth(Width / 12.0 + 10);
+        column5.setPrefWidth(Width / 12.0 - 10);
+        column6.setPrefWidth(Width / 12.0);
+        tableView.getColumns().addAll(column1, column2, column3, column4, column5, column6);
         try {
             tableView.setItems(observableList);
         } catch (NullPointerException e) {
@@ -210,7 +217,7 @@ public class PaymentUI extends BaseUI {
                     setAsError(textFieldList[3]);
                     showAlert(Alert.AlertType.ERROR, "Reduce the amount");
                 } else {
-                    Payment p = new Payment(null, num, amount, date, type, sale);
+                    Payment p = new Payment(null, num, amount, date, type, Payment.paymentsStates[0], "---", sale);
                     if (paymentDAOIMPL.create(p)) {
                         if (!checkPaymentType(p))
                             paymentDAOIMPL.delete(p);
@@ -249,6 +256,44 @@ public class PaymentUI extends BaseUI {
                 }
             }
             return valid;
+        }
+        if (p.getType().equals(SaleDAOIMPL.paymentTypes[2])) {
+            TextInputDialog dialog = new TextInputDialog();
+            dialog.setTitle("Check number");
+            dialog.setContentText("Please enter the check number:");
+            Optional<String> result = dialog.showAndWait();
+            if (result.isPresent()) {
+                p.setState(Payment.paymentsStates[1]);
+                return paymentDAOIMPL.update(p,
+                        new Payment((long) 0, p.getNum(), p.getAmount(), p.getDate(), p.getType(), p.getState(), result.get(), p.getSale()));
+            } else {
+                return false;
+            }
+        }
+        if (p.getType().equals(SaleDAOIMPL.paymentTypes[3])) {
+            TextInputDialog dialog = new TextInputDialog();
+            dialog.initStyle(StageStyle.UTILITY);
+            dialog.setTitle("Number of drafts");
+            dialog.setContentText("Please enter the drafts number:");
+            Optional<String> result = dialog.showAndWait();
+            if (result.isPresent()) {
+                int number = checkInt(result.get());
+                double amount = p.getAmount() / number;
+                LocalDate date = p.getDate().minusMonths(1);
+                System.out.println(date);
+                System.out.println(date.plusMonths(2));
+                for (int i = 0; i < number; i++) {
+                    Payment payment = new Payment((long) 0, i + 1, amount, date.plusMonths(1),
+                            SaleDAOIMPL.paymentTypes[2], Payment.paymentsStates[1], "-----", p.getSale());
+                    if (paymentDAOIMPL.create(payment)) {
+                        paymentObservableList.add(payment);
+                        clearButtonClick();
+                        payed.set(payed.get() + amount);
+                    }
+
+                }
+                return false;
+            }
         }
         return true;
     }
@@ -295,25 +340,58 @@ public class PaymentUI extends BaseUI {
 
     @Override
     protected void updateButtonClick() {
+        boolean DoIt = false;
         Payment p = paymentTableView.getSelectionModel().getSelectedItem();
+        Payment p2 = p;
+        double deference = 0;
         int index = paymentTableView.getSelectionModel().getSelectedIndex();
         LocalDate date = getDateDatepicker(datePicker);
-        Double amount = checkDouble(textFieldList[3]);
-        if (p != null && date != null && amount != null) {
-            double deference = amount - p.getAmount();
-            if (deference > rest.get()) {
-                setAsError(textFieldList[3]);
-                System.out.println("Reduce the amount");
-            } else if (showAlert(Alert.AlertType.WARNING, "Do you want to update ?") == ButtonType.OK)
-                if (paymentDAOIMPL.update(p, new Payment(null, (long) 0, amount, date, p.getType(), sale))) {
+
+        if (p != null && date != null) {
+            if (p.getType().equals(SaleDAOIMPL.paymentTypes[2])) {
+                Dialog<Payment> dialog = new Dialog<>();
+                dialog.setTitle("Check number");
+                dialog.setHeaderText("Please enter the check number and state");
+                DialogPane dialogPane = dialog.getDialogPane();
+                dialogPane.getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+                TextField textField = new TextField(p.getChecknumber());
+                ObservableList<String> options =
+                        FXCollections.observableArrayList(Payment.paymentsStates);
+                ComboBox<String> comboBox = new ComboBox<>(options);
+                comboBox.getSelectionModel().select(p.getState());
+                dialogPane.setContent(new VBox(8, textField, comboBox));
+                Platform.runLater(textField::requestFocus);
+                dialog.setResultConverter((ButtonType button) -> {
+                    if (button == ButtonType.OK) {
+                        return new Payment(p.getId(), p.getNum(), p.getAmount(), date, p.getType(), comboBox.getSelectionModel().getSelectedItem(), textField.getText(), sale);
+                    }
+                    return null;
+                });
+                p2 = dialog.showAndWait().orElse(null);
+                if (p2 != null)
+                    DoIt = showAlert(Alert.AlertType.WARNING, "Do you want to update ?") == ButtonType.OK;
+            } else {
+                Double amount = checkDouble(textFieldList[3]);
+                if (amount != null) {
+                    deference = amount - p.getAmount();
+                    if (deference > rest.get()) {
+                        setAsError(textFieldList[3]);
+                        showAlert(Alert.AlertType.ERROR, "Reduce the amount");
+                    } else {
+                        p2 = new Payment(null, 0, amount, date, p.getType(), p.getState(), p.getChecknumber(), sale);
+                        DoIt = showAlert(Alert.AlertType.WARNING, "Do you want to update ?") == ButtonType.OK;
+                    }
+                } else {
+                    showAlert(Alert.AlertType.ERROR, "Non valid input");
+                }
+            }
+            if (DoIt)
+                if (paymentDAOIMPL.update(p, p2)) {
                     paymentObservableList.set(index, p);
                     clearButtonClick();
                     paymentTableView.getSelectionModel().clearSelection();
                     payed.set(payed.get() + deference);
                 }
-
-        } else {
-            System.out.println("Non valid input");
         }
     }
 
@@ -339,7 +417,7 @@ public class PaymentUI extends BaseUI {
             paymentTableView.getSelectionModel().clearSelection();
         } catch (NullPointerException ignored) {
         }
-        datePicker.getEditor().clear();
+        datePicker.setValue(LocalDate.now());
         comboBox.getEditor().clear();
         textFieldList[3].setText(String.valueOf(rest.get()));
     }

@@ -26,7 +26,8 @@ public class PaymentDAOIMPL implements MagazineDAO<Payment> {
                 if (resultSet.next()) {
                     return new Payment(resultSet.getLong("id"), resultSet.getLong("num"),
                             resultSet.getDouble("amount"), resultSet.getDate("date").toLocalDate(),
-                            resultSet.getString("type"), saleDAOIMPL.find(resultSet.getLong("sale_id")));
+                            resultSet.getString("type"), resultSet.getString("state"),
+                            resultSet.getString("check_number"), saleDAOIMPL.find(resultSet.getLong("sale_id")));
                 }
             } catch (SQLException e) {
                 System.out.println(e.toString());
@@ -39,8 +40,9 @@ public class PaymentDAOIMPL implements MagazineDAO<Payment> {
 
     @Override
     public boolean create(Payment p) {
-        String sql = String.format("INSERT INTO `payments` (`sale_id`, `num`, `amount`, `date`, `type`) VALUES ('%d', '%d', '%s', '%s', '%s')",
-                p.getSale().getId(), p.getNum(), p.getAmount(), p.getDate(), p.getType());
+        String sql = String.format("INSERT INTO `payments` (`sale_id`, `num`, `amount`, `date`, `type`,`state`,`check_number`) " +
+                        "VALUES ('%d', '%d', '%s', '%s', '%s', '%s', '%s')",
+                p.getSale().getId(), p.getNum(), p.getAmount(), p.getDate(), p.getType(), p.getState(), p.getChecknumber());
         try {
             PreparedStatement statement = connection.prepareStatement(sql,
                     Statement.RETURN_GENERATED_KEYS);
@@ -81,8 +83,9 @@ public class PaymentDAOIMPL implements MagazineDAO<Payment> {
 
     @Override
     public boolean update(Payment p1, Payment p2) {
-        String sql = String.format("UPDATE `payments` SET `amount` = '%s' ,`date`= '%s' ,`type`= '%s' WHERE `payments`.`id` =%d",
-                p2.getAmount(), p2.getDate(), p2.getType(), p1.getId());
+        String sql = String.format("UPDATE `payments` SET `amount` = '%f' ,`date`= '%s' ,`type`= '%s' ,`state`= '%s',`check_number`= '%s' " +
+                        "WHERE `payments`.`id` =%d",
+                p2.getAmount(), p2.getDate(), p2.getType(), p2.getState(), p2.getChecknumber(), p1.getId());
 
         try {
             statement = connection.createStatement();
@@ -121,7 +124,8 @@ public class PaymentDAOIMPL implements MagazineDAO<Payment> {
             while (resultSet.next()) {
                 list.add(new Payment(resultSet.getLong("id"), resultSet.getLong("num"),
                         resultSet.getDouble("amount"), resultSet.getDate("date").toLocalDate(),
-                        resultSet.getString("type"), saleDAOIMPL.find(resultSet.getLong("sale_id"))));
+                        resultSet.getString("type"), resultSet.getString("state"),
+                        resultSet.getString("check_number"), saleDAOIMPL.find(resultSet.getLong("sale_id"))));
             }
         } catch (SQLException e) {
             e.printStackTrace();
