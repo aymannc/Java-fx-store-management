@@ -12,7 +12,6 @@ import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
-import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.util.StringConverter;
 import javafx.util.converter.DoubleStringConverter;
@@ -50,29 +49,15 @@ public class PaymentUI extends BaseUI {
     private DoubleProperty payed;
     private DoubleProperty rest;
 
-    public PaymentUI(String label, Stage parentStage, Sale sale) {
+    public PaymentUI(String label, Sale sale) {
         super(label);
-        mainStage.setOnHiding(event -> parentStage.show());
-        this.sale = sale;
-    }
-
-    public PaymentUI(Stage parentStage, Sale sale) {
-        super("Gestion des payments");
-        mainStage.setOnHiding(event -> parentStage.show());
+        mainStage.setOnHiding(event -> new SaleUI());
         this.sale = sale;
         initTableViewData();
     }
 
     public PaymentUI(Sale sale) {
-        super("Gestion des payments");
-        this.sale = sale;
-        initTableViewData();
-    }
-
-    public PaymentUI(String label, Sale sale) {
-        super(label);
-        this.sale = sale;
-        initTableViewData();
+        this("Gestion des payments", sale);
     }
 
     public static void createDataView(ObservableList<Payment> observableList,
@@ -101,7 +86,7 @@ public class PaymentUI extends BaseUI {
         try {
             tableView.setItems(observableList);
         } catch (NullPointerException e) {
-            System.out.println("Products list empty");
+            System.out.println("Payments list empty");
         }
         tableView.setMaxHeight(3 * Heigth / 5.0);
     }
@@ -315,7 +300,6 @@ public class PaymentUI extends BaseUI {
 
         } catch (IOException e) {
             showAlert(Alert.AlertType.ERROR, "500 Internal Server Error : " + e.getMessage());
-            e.printStackTrace();
             valid = false;
         }
         return valid;

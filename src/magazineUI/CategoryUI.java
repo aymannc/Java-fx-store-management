@@ -31,6 +31,7 @@ public class CategoryUI extends BaseUI {
         insertContainer.setMinWidth((Width / 3) - 20);
         labelList[0] = new Label("Code :");
         textFieldList[0] = new TextField();
+        readOnlyTextField(textFieldList[0]);
         labelList[1] = new Label("Nom :");
         textFieldList[1] = new TextField();
         insertContainer.getChildren().addAll(labelList[0], textFieldList[0], labelList[1], textFieldList[1]);
@@ -85,14 +86,14 @@ public class CategoryUI extends BaseUI {
 
     @Override
     protected void addButtonClick() {
-        Long id = checkLong(textFieldList[0]);
         String name = textFieldList[1].getText();
-        if (id != null && name.length() > 0) {
-            Category c = new Category(id, name);
+        if (name.length() > 0) {
+            Category c = new Category(0, name);
+            System.out.println(c);
             if (categoryDAOIMPL.create(c)) {
+                System.out.println(c);
                 observableList.add(c);
-                for (int i = 0; i < textFieldList.length - 1; i++)
-                    textFieldList[i].clear();
+                clearButtonClick();
             }
         } else {
             System.out.println("Non valid input");
@@ -104,14 +105,11 @@ public class CategoryUI extends BaseUI {
     protected void updateButtonClick() {
         Category c = (Category) tableView.getSelectionModel().getSelectedItem();
         int index = tableView.getSelectionModel().getSelectedIndex();
-        Long id = checkLong(textFieldList[0]);
         String name = textFieldList[1].getText();
-        if (id != null && name != null && c != null) {
-            if (categoryDAOIMPL.update(c, new Category(id, name))) {
+        if (name != null && c != null) {
+            if (categoryDAOIMPL.update(c, new Category(c.getId(), name))) {
                 observableList.set(index, c);
-                for (int i = 0; i < textFieldList.length - 1; i++)
-                    textFieldList[i].clear();
-                tableView.getSelectionModel().clearSelection();
+                clearButtonClick();
             }
 
         } else {
@@ -122,21 +120,22 @@ public class CategoryUI extends BaseUI {
     @Override
     protected void deleteButtonClick() {
         Category c = (Category) tableView.getSelectionModel().getSelectedItem();
-        if (categoryDAOIMPL.delete(c)) {
-            observableList.remove(c);
-            tableView.getSelectionModel().clearSelection();
+        if (c != null) {
+            if (categoryDAOIMPL.delete(c)) {
+                observableList.remove(c);
+                tableView.getSelectionModel().clearSelection();
+            }
         }
+
     }
 
     @Override
     void clearButtonClick() {
 
-        for (int i = 0; i < textFieldList.length; i++)
-            textFieldList[i].clear();
+        for (TextField textField : textFieldList) textField.clear();
         try {
             tableView.getSelectionModel().clearSelection();
-        } catch (NullPointerException e) {
+        } catch (NullPointerException ignored) {
         }
-//        additionalClears();
     }
 }

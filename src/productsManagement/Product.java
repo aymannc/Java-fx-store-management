@@ -59,7 +59,6 @@ public class Product {
     }
 
     public void update(Product p) {
-        this.code = p.code;
         this.designation = p.designation;
         this.price = p.price;
         this.category = p.category;

@@ -115,14 +115,16 @@ public abstract class BaseUI {
     }
 
     protected String getStringComboBoxInput(ComboBox<String> comboBox) {
-        if (comboBox.getValue() == null) {
-            comboBox.setStyle("-fx-border-color: red ;-fx-focus-color: red ;");
-            return null;
-        } else {
-            comboBox.setStyle("");
+        if (comboBox != null) {
+            if (comboBox.getValue() == null) {
+                comboBox.setStyle("-fx-border-color: red ;-fx-focus-color: red ;");
+                return null;
+            } else {
+                comboBox.setStyle("");
+            }
+            return comboBox.getValue();
         }
-        return comboBox.getValue();
-
+        return null;
     }
 
     protected int checkInt(String number) {

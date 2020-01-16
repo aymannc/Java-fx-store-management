@@ -162,7 +162,6 @@ public class PaymentDAOIMPL implements MagazineDAO<Payment> {
     public ArrayList<Payment> findAll(Sale sale) {
         try {
             String sql = "select * from payments WHERE sale_id = " + sale.getId() + "";
-            System.out.println(sql);
             return getResult(sql);
         } catch (NullPointerException ignored) {
         }

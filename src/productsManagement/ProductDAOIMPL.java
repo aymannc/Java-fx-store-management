@@ -6,10 +6,7 @@ import javafx.collections.ObservableList;
 import magazineDAO.MagazineDAO;
 import shared.DataConnection;
 
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -20,7 +17,7 @@ public class ProductDAOIMPL implements MagazineDAO<Product> {
 
     @Override
     public Product find(long id) {
-        String sql = "select * from products where id='" + id + "'";
+        String sql = String.format("select * from products where id='%d'", id);
         try {
             statement = connection.createStatement();
         } catch (SQLException e) {
@@ -41,13 +38,25 @@ public class ProductDAOIMPL implements MagazineDAO<Product> {
 
     @Override
     public boolean create(Product p) {
-        String sql = "INSERT INTO `products` (`id`,`name`, `price`,`category_id`) VALUES ('" + p.getCode() + "','" + p.getDesignation() + "','" +
-                p.getPrice() + "', '" + p.getCategory().getId() + "')";
+        String sql = String.format("INSERT INTO `products` (`name`, `price`,`category_id`) VALUES ('%s','%s', '%d')",
+                p.getDesignation(), p.getPrice(), p.getCategory().getId());
         try {
-            statement = connection.createStatement();
-            statement.execute(sql);
-        } catch (SQLException e) {
+            PreparedStatement statement = connection.prepareStatement(sql,
+                    Statement.RETURN_GENERATED_KEYS);
+            int affectedRows = statement.executeUpdate();
+            if (affectedRows == 0) {
+                throw new SQLException("Creating payment failed, no rows affected.");
+            }
+            try (ResultSet generatedKeys = statement.getGeneratedKeys()) {
+                if (generatedKeys.next()) {
+                    p.setCode(generatedKeys.getLong(1));
+                } else {
+                    throw new SQLException("Creating payment failed, no ID obtained.");
+                }
+            }
+        } catch (Exception e) {
             System.out.println("Errors in create");
+//            System.out.println(e.toString());
             e.printStackTrace();
             return false;
         }
@@ -56,7 +65,7 @@ public class ProductDAOIMPL implements MagazineDAO<Product> {
 
     @Override
     public boolean delete(Product p) {
-        String sql = "delete from products where id=" + p.getCode();
+        String sql = String.format("delete from products where id=%d", p.getCode());
 
         try {
             statement = connection.createStatement();
@@ -71,8 +80,8 @@ public class ProductDAOIMPL implements MagazineDAO<Product> {
 
     @Override
     public boolean update(Product p1, Product p2) {
-        String sql = "UPDATE `products` SET `id` = '" + p2.getCode() + "',`name` = '" + p2.getDesignation() + "',`price` = '" +
-                p2.getPrice() + "' ,`category_id`= '" + p2.getCategory().getId() + "' WHERE `products`.`id` =" + p1.getCode();
+        String sql = String.format("UPDATE `products` SET `name` = '%s',`price` = '%s' ,`category_id`= '%d' WHERE `products`.`id` =%d",
+                p2.getDesignation(), p2.getPrice(), p2.getCategory().getId(), p1.getCode());
 
         try {
             statement = connection.createStatement();
@@ -111,11 +120,20 @@ public class ProductDAOIMPL implements MagazineDAO<Product> {
     }
 
     public ObservableList<Product> getAll() {
-        return FXCollections.observableArrayList(findAll());
+        try {
+            return FXCollections.observableArrayList(findAll());
+        } catch (NullPointerException e) {
+            return FXCollections.observableArrayList(new ArrayList<>());
+        }
+
     }
 
     public ObservableList<Product> getAll(String s) {
-        return FXCollections.observableArrayList(findAll(s));
+        try {
+            return FXCollections.observableArrayList(findAll(s));
+        } catch (NullPointerException e) {
+            return FXCollections.observableArrayList(new ArrayList<>());
+        }
     }
 
     @Override

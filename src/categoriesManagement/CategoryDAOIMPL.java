@@ -5,10 +5,7 @@ import javafx.collections.ObservableList;
 import magazineDAO.MagazineDAO;
 import shared.DataConnection;
 
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -37,12 +34,25 @@ public class CategoryDAOIMPL implements MagazineDAO<Category> {
     }
 
     public boolean create(Category category) {
-        String sql = "INSERT INTO `categories` (`id`,`name`) VALUES ('" + category.getId() + "','" + category.getName() + "');";
+        String sql = String.format("INSERT INTO `categories` (`name`) VALUES ('%s');", category.getName());
         try {
-            statement = connection.createStatement();
-            statement.execute(sql);
-        } catch (SQLException e) {
-            System.out.println(e);
+            PreparedStatement statement = connection.prepareStatement(sql,
+                    Statement.RETURN_GENERATED_KEYS);
+            int affectedRows = statement.executeUpdate();
+            if (affectedRows == 0) {
+                throw new SQLException("Creating payment failed, no rows affected.");
+            }
+            try (ResultSet generatedKeys = statement.getGeneratedKeys()) {
+                if (generatedKeys.next()) {
+                    category.setId(generatedKeys.getLong(1));
+                } else {
+                    throw new SQLException("Creating payment failed, no ID obtained.");
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("Errors in create");
+//            System.out.println(e.toString());
+            e.printStackTrace();
             return false;
         }
         return true;
@@ -67,7 +77,7 @@ public class CategoryDAOIMPL implements MagazineDAO<Category> {
 
     @Override
     public boolean update(Category c1, Category c2) {
-        String sql = "UPDATE `categories` SET `id` = '" + c2.getId() + "',`name` = '" + c2.getName() + "' WHERE `id` =" + c1.getId();
+        String sql = String.format("UPDATE `categories` SET `name` = '%s' WHERE `id` =%d", c2.getName(), c1.getId());
 
         try {
             statement = connection.createStatement();
@@ -77,11 +87,8 @@ public class CategoryDAOIMPL implements MagazineDAO<Category> {
             System.out.println("Errors in update");
             return false;
         }
-        c1.setId(c2.getId());
         c1.setName(c2.getName());
-
         return true;
-
     }
 
     public List<Category> findAll() {
@@ -118,10 +125,18 @@ public class CategoryDAOIMPL implements MagazineDAO<Category> {
     }
 
     public ObservableList<Category> getAll() {
-        return FXCollections.observableArrayList(findAll());
+        try {
+            return FXCollections.observableArrayList(findAll());
+        } catch (NullPointerException e) {
+            return FXCollections.observableArrayList(new ArrayList<>());
+        }
     }
 
     public ObservableList<Category> getAll(String s) {
-        return FXCollections.observableArrayList(findAll(s));
+        try {
+            return FXCollections.observableArrayList(findAll(s));
+        } catch (NullPointerException e) {
+            return FXCollections.observableArrayList(new ArrayList<>());
+        }
     }
 }

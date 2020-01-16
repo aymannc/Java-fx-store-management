@@ -17,7 +17,7 @@ public class ProductUI extends BaseUI {
     ProductDAOIMPL productDataAccess;
     CategoryDAOIMPL categoryDAOIMPL;
     ObservableList<Product> observableList;
-    ComboBox comboBox;
+    ComboBox<Category> comboBox;
 
     public ProductUI(String label, Stage parentStage) {
         super(label);
@@ -64,6 +64,7 @@ public class ProductUI extends BaseUI {
         insertContainer.setMinWidth((Width / 3) - 20);
         labelList[0] = new Label("Code :");
         textFieldList[0] = new TextField();
+        readOnlyTextField(textFieldList[0]);
         labelList[1] = new Label("Designation :");
         textFieldList[1] = new TextField();
         labelList[2] = new Label("Price :");
@@ -117,15 +118,13 @@ public class ProductUI extends BaseUI {
 
     @Override
     protected void addButtonClick() {
-        Long id = checkLong(textFieldList[0]);
         Double price = checkDouble(textFieldList[2]);
         Category category = getCategoryComboBoxInput(comboBox);
-        if (id != null && price != null && category != null) {
-            Product p = new Product(id, textFieldList[1].getText(), price, category);
+        if (price != null && category != null) {
+            Product p = new Product(0, textFieldList[1].getText(), price, category);
             if (productDataAccess.create(p)) {
                 observableList.add(p);
-                for (int i = 0; i < textFieldList.length - 1; i++)
-                    textFieldList[i].clear();
+                clearButtonClick();
             }
         } else {
             System.out.println("Non valid input");
@@ -137,16 +136,13 @@ public class ProductUI extends BaseUI {
     protected void updateButtonClick() {
         Product p = (Product) tableView.getSelectionModel().getSelectedItem();
         int index = tableView.getSelectionModel().getSelectedIndex();
-        Long id = checkLong(textFieldList[0]);
         String designation = textFieldList[1].getText();
         Double price = checkDouble(textFieldList[2]);
-        Category category = (Category) comboBox.getValue();
-        if (id != null && price != null && category != null && p != null) {
-            if (productDataAccess.update(p, new Product(id, designation, price, category))) {
+        Category category = comboBox.getValue();
+        if (price != null && category != null && p != null) {
+            if (productDataAccess.update(p, new Product(p.getCode(), designation, price, category))) {
                 observableList.set(index, p);
-                for (int i = 0; i < textFieldList.length - 1; i++)
-                    textFieldList[i].clear();
-                tableView.getSelectionModel().clearSelection();
+                clearButtonClick();
             }
 
         } else {
@@ -159,18 +155,17 @@ public class ProductUI extends BaseUI {
         Product p = (Product) tableView.getSelectionModel().getSelectedItem();
         if (productDataAccess.delete(p)) {
             observableList.remove(p);
-            tableView.getSelectionModel().clearSelection();
+            clearButtonClick();
         }
     }
 
     @Override
     void clearButtonClick() {
 
-        for (int i = 0; i < textFieldList.length; i++)
-            textFieldList[i].clear();
+        for (TextField textField : textFieldList) textField.clear();
         try {
             tableView.getSelectionModel().clearSelection();
-        } catch (NullPointerException e) {
+        } catch (NullPointerException ignored) {
         }
     }
 }

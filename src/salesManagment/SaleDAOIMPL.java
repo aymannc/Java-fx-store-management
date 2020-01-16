@@ -127,11 +127,19 @@ public class SaleDAOIMPL implements MagazineDAO<Sale> {
     }
 
     public ObservableList<Sale> getAll() {
-        return FXCollections.observableArrayList(findAll());
+        try {
+            return FXCollections.observableArrayList(findAll());
+        } catch (NullPointerException ignored) {
+            return FXCollections.observableArrayList(new ArrayList<>());
+        }
     }
 
     public ObservableList<Sale> getAll(String s) {
-        return FXCollections.observableArrayList(findAll(s));
+        try {
+            return FXCollections.observableArrayList(findAll(s));
+        } catch (NullPointerException ignored) {
+            return FXCollections.observableArrayList(new ArrayList<>());
+        }
     }
 
     @Override
@@ -148,13 +156,12 @@ public class SaleDAOIMPL implements MagazineDAO<Sale> {
 
     }
 
-    public boolean updateTotal(double subTotal, Sale sale, boolean delete) {
-        double total = delete ? sale.getTotal() - subTotal : subTotal + sale.getTotal();
-        System.out.println("deleted " + total);
+    public boolean setTotal(Sale sale, double total) {
         String sql = String.format("UPDATE `sales` SET `total` = '%.2f' WHERE `sales`.`id` =%d",
                 total,
                 sale.getId());
         System.out.println(sql);
+        sale.setTotal(total);
         try {
             statement = connection.createStatement();
             statement.execute(sql);

@@ -11,7 +11,6 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
-import javafx.stage.Stage;
 import paymentsManagment.Payment;
 import paymentsManagment.PaymentDAOIMPL;
 import salesManagment.Sale;
@@ -20,6 +19,7 @@ import salesManagment.SaleItem;
 import salesManagment.SaleItemDAOIMPL;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public class SaleUI extends BaseUI {
     PaymentDAOIMPL paymentDAOIMPL;
@@ -39,23 +39,14 @@ public class SaleUI extends BaseUI {
     TableView<Sale> saleTableView;
     TableView<SaleItem> saleItemTableView;
     TableView<Payment> paymentTableView;
+    ComboBox<String> comboBox2;
 
-    public SaleUI(String label, Stage parentStage) {
-        super(label);
-        mainStage.setOnHiding(event -> {
-            parentStage.show();
-        });
-    }
-
-    public SaleUI(Stage parentStage) {
-        super("Gestion des ventes");
-        mainStage.setOnHiding(event -> {
-            parentStage.show();
-        });
+    public SaleUI() {
+        this("Gestion des vents");
     }
 
     public SaleUI(String label) {
-        super(label);
+        super(1200, 600, label);
     }
 
     @Override
@@ -68,7 +59,7 @@ public class SaleUI extends BaseUI {
         paymentsContainer = new VBox(5);
 
         labelList = new Label[9];
-        textFieldList = new TextField[6];
+        textFieldList = new TextField[5];
 
         insertContainer = new VBox(15);
         insertContainer.setMinWidth((Width >> 1));
@@ -104,17 +95,13 @@ public class SaleUI extends BaseUI {
         Button modifyButton = new Button("Modifier un client");
         modifyButton.setOnMouseClicked(event -> {
             new ClientUI(this.mainStage);
+            mainStage.close();
         });
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
         holder.getChildren().addAll(labelList[6], textFieldList[3], spacer, modifyButton);
 
         ClientUI.createDataView(clientsObservableList, clientTableView);
-        clientTableView.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
-            if (newSelection != null) {
-//                System.out.println(newSelection);
-            }
-        });
         clientTableView.setMaxHeight(75);
 
         FilteredList<Client> filteredList = new FilteredList<>(clientsObservableList);
@@ -140,18 +127,16 @@ public class SaleUI extends BaseUI {
         Button modifyButton = new Button("Modifier LC");
         modifyButton.setOnMouseClicked(event -> {
             Sale sale = saleTableView.getSelectionModel().getSelectedItem();
-            if (sale != null)
-                new SaleItemUI(this.mainStage, sale);
+            if (sale != null) {
+                this.mainStage.close();
+                new SaleItemUI(sale, false);
+            }
         });
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
         holder.getChildren().addAll(labelList[7], textFieldList[4], spacer, modifyButton);
 
         SaleItemUI.createDataView(saleItemObservableList, saleItemTableView);
-        saleItemTableView.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
-            if (newSelection != null) {
-            }
-        });
         saleItemTableView.setMaxHeight(75);
 
         FilteredList<SaleItem> filteredList = new FilteredList<>(saleItemObservableList);
@@ -171,30 +156,32 @@ public class SaleUI extends BaseUI {
         HBox holder = new HBox(10);
         holder.setMinWidth(Width >> 1);
         labelList[8] = new Label("Search for :(Type)");
-        textFieldList[5] = new TextField();
         Button modifyButton = new Button("Modifier les payment");
         modifyButton.setOnMouseClicked(event -> {
             Sale sale = saleTableView.getSelectionModel().getSelectedItem();
-            if (sale != null)
-                new PaymentUI(this.mainStage, sale);
+            if (sale != null) {
+                this.mainStage.close();
+                new PaymentUI(sale);
+            }
+
         });
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-        holder.getChildren().addAll(labelList[8], textFieldList[5], spacer, modifyButton);
+        ArrayList<String> cl = new ArrayList<>(List.of(SaleDAOIMPL.paymentTypes));
+        cl.add(0, "All");
+        comboBox2 = new ComboBox<>(FXCollections.observableArrayList(cl));
+        comboBox2.getSelectionModel().selectFirst();
+        holder.getChildren().addAll(labelList[8], comboBox2, spacer, modifyButton);
 
         PaymentUI.createDataView(null, paymentTableView);
-        paymentTableView.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
-            if (newSelection != null) {
-            }
-        });
         paymentTableView.setMaxHeight(75);
-
         FilteredList<Payment> filteredList = new FilteredList<>(paymentObservableList);
+
         paymentTableView.setItems(filteredList);
-        textFieldList[5].textProperty().addListener((observable, oldValue, newValue) ->
-                filteredList.setPredicate((newValue == null || newValue.length() == 0) ? s -> true :
-                        s -> s.getType().toLowerCase().contains(newValue.toLowerCase())
-                ));
+        comboBox2.valueProperty().addListener((observable, oldValue, newValue) ->
+                filteredList.setPredicate(newValue.equals("All") ? s -> true : s -> s.getType().
+                        toLowerCase().contains(newValue.toLowerCase()))
+        );
         paymentsContainer.getChildren().addAll(holder, paymentTableView);
     }
 
@@ -251,7 +238,15 @@ public class SaleUI extends BaseUI {
                 saleItemObservableList.clear();
                 try {
                     paymentObservableList.addAll(paymentDAOIMPL.getAll(newSelection));
+                } catch (Exception e) {
+                    System.out.println(e);
+                }
+                try {
                     saleItemDAOIMPL.setSale(newSelection);
+                } catch (Exception e) {
+                    System.out.println(e);
+                }
+                try {
                     saleItemObservableList.addAll(saleItemDAOIMPL.getAllObsList());
                 } catch (Exception e) {
                     System.out.println(e);
@@ -272,11 +267,10 @@ public class SaleUI extends BaseUI {
     protected void addButtonClick() {
         Client c = clientTableView.getSelectionModel().getSelectedItem();
         if (c != null) {
-            Sale s = new Sale(null, c, 0, null, null, null);
-            if (saleDAOIMPL.create(s)) {
-                salesObservableList.add(s);
-                clearButtonClick();
-            }
+            Sale s = new Sale();
+            s.setClient(c);
+            mainStage.close();
+            new SaleItemUI(s, true);
         }
     }
 
@@ -305,13 +299,22 @@ public class SaleUI extends BaseUI {
 
     @Override
     void clearButtonClick() {
-        for (int i = 0; i < textFieldList.length; i++)
-            textFieldList[i].clear();
+        for (TextField textField : textFieldList) textField.clear();
         try {
             saleTableView.getSelectionModel().clearSelection();
-            saleItemTableView.getSelectionModel().clearSelection();
-            paymentTableView.getSelectionModel().clearSelection();
-        } catch (NullPointerException e) {
+        } catch (NullPointerException ignored) {
+            System.out.println(1);
+        }
+        try {
+            saleItemObservableList.clear();
+        } catch (NullPointerException ignored) {
+            System.out.println(2);
+        }
+        try {
+            saleItemObservableList.clear();
+        } catch (NullPointerException ignored) {
+
+            System.out.println(3);
         }
     }
 }

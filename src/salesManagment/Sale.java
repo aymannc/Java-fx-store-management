@@ -23,6 +23,10 @@ public class Sale {
         this.dateDeleted = dateDeleted;
     }
 
+    public Sale() {
+        this.id = (long) -1;
+    }
+
     @Override
     public String toString() {
         return "Sale{" +

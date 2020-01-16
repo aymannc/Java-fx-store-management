@@ -60,7 +60,7 @@ public class SaleItemDAOIMPL implements MagazineDAO<SaleItem> {
                     throw new SQLException("Creating SALEITEM failed, no ID obtained.");
                 }
             }
-            if (saleDAOIMPL.updateTotal(sale.getSubTotal(), sale.getSale(), false))
+            if (saleDAOIMPL.setTotal(this.sale, this.sale.getTotal() + sale.getSubTotal()))
                 System.out.println("create Sale total updated");
         } catch (SQLException e) {
             System.out.println("Errors in create" + e.toString());
@@ -75,10 +75,7 @@ public class SaleItemDAOIMPL implements MagazineDAO<SaleItem> {
             String sql = String.format("delete from saleitems where id=%d", sale.getId());
             System.out.println(sql);
             statement = connection.createStatement();
-            if (!statement.execute(sql)) {
-                if (saleDAOIMPL.updateTotal(sale.getSubTotal(), sale.getSale(), true))
-                    System.out.println("delete Sale total updated");
-            }
+            statement.execute(sql);
 
         } catch (SQLException e) {
             System.out.println("Errors in delete" + e.toString());
@@ -91,16 +88,18 @@ public class SaleItemDAOIMPL implements MagazineDAO<SaleItem> {
     }
 
     @Override
-    public boolean update(SaleItem sale1, SaleItem sale2) {
-        String sql = String.format("UPDATE `saleitems` SET `num` = '%d',`quantity` = '%d',`sub_total` = '%f',`sale_id` = '%s' ,`product_id`= '%s' WHERE `id` =%d", sale2.getNum(), sale2.getQuantity(), sale2.getSubTotal(), sale2.getSale().getId(), sale2.getProduct().getCode(), sale1.getId());
+    public boolean update(SaleItem saleitem1, SaleItem saleitem2) {
+        String sql = String.format("UPDATE `saleitems` SET `num` = '%d',`quantity` = '%d',`sub_total` = '%f',`sale_id`" +
+                        " = '%s' ,`product_id`= '%s' WHERE `id` =%d",
+                saleitem2.getNum(), saleitem2.getQuantity(), saleitem2.getSubTotal(), saleitem2.getSale().getId(),
+                saleitem2.getProduct().getCode(), saleitem1.getId());
 
         try {
             statement = connection.createStatement();
             statement.execute(sql);
-            double old = sale1.getSubTotal();
-            sale1.update(sale2);
-            if (updateQuantity(sale1, old))
-                System.out.println("update updateQuantity");
+            saleitem1.update(saleitem2);
+            if (updateQuantity(saleitem1))
+                return true;
         } catch (SQLException e) {
             System.out.println("Errors in update" + e.toString());
             return false;
@@ -179,9 +178,7 @@ public class SaleItemDAOIMPL implements MagazineDAO<SaleItem> {
         this.sale = sale;
     }
 
-    public boolean updateQuantity(SaleItem saleItem, double old) {
-        System.out.println("old " + old);
-        saleItem.setSubTotal(saleItem.getQuantity() * saleItem.getProduct().getPrice());
+    public boolean updateQuantity(SaleItem saleItem) {
         System.out.println("new " + saleItem.getSubTotal());
         String sql = String.format("UPDATE `saleitems` SET `quantity` = '%d',`sub_total` = '%f' WHERE `id` =%d",
                 saleItem.getQuantity(),
@@ -191,13 +188,14 @@ public class SaleItemDAOIMPL implements MagazineDAO<SaleItem> {
         try {
             statement = connection.createStatement();
             statement.execute(sql);
-            if (saleDAOIMPL.updateTotal(saleItem.getSubTotal() - old, saleItem.getSale(), false)) {
+            double total = getSaleTotal();
+            if (saleDAOIMPL.setTotal(saleItem.getSale(), total)) {
                 System.out.println("updateQuantity Sale total updated");
+                return true;
             }
         } catch (SQLException e) {
             System.out.println("Errors in create" + e.toString());
-            return false;
         }
-        return true;
+        return false;
     }
 }

@@ -5,10 +5,7 @@ import javafx.collections.ObservableList;
 import magazineDAO.MagazineDAO;
 import shared.DataConnection;
 
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -18,7 +15,7 @@ public class ClientDAOIMPL implements MagazineDAO<Client> {
 
     @Override
     public Client find(long id) {
-        String sql = "select * from clients where id='" + id + "'";
+        String sql = String.format("select * from clients where id='%d'", id);
         try {
             statement = connection.createStatement();
         } catch (SQLException e) {
@@ -40,14 +37,25 @@ public class ClientDAOIMPL implements MagazineDAO<Client> {
 
     @Override
     public boolean create(Client client) {
-        String sql = "INSERT INTO `clients` (`id`,`full_name`, `gender`, `address`, `phone_number`, `email`) VALUES" + " ('" + client.getId() + "','"
-                + client.getName() + "', '" + client.getGender() + "', '" + client.getAddress() + "', '"
-                + client.getPhone() + "', '" + client.getEmail() + "')";
-        System.out.println(sql);
+        String sql = String.format("INSERT INTO `clients` (`full_name`, `gender`, `address`, `phone_number`, `email`) VALUES ('%s', '%s', '%s', '%s', '%s')",
+                client.getName(), client.getGender(), client.getAddress(), client.getPhone(), client.getEmail());
         try {
-            statement = connection.createStatement();
-            statement.execute(sql);
-        } catch (SQLException e) {
+            PreparedStatement statement = connection.prepareStatement(sql,
+                    Statement.RETURN_GENERATED_KEYS);
+            int affectedRows = statement.executeUpdate();
+            if (affectedRows == 0) {
+                throw new SQLException("Creating payment failed, no rows affected.");
+            }
+            try (ResultSet generatedKeys = statement.getGeneratedKeys()) {
+                if (generatedKeys.next()) {
+                    client.setId(generatedKeys.getLong(1));
+                } else {
+                    throw new SQLException("Creating payment failed, no ID obtained.");
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("Errors in create");
+//            System.out.println(e.toString());
             e.printStackTrace();
             return false;
         }
@@ -56,7 +64,7 @@ public class ClientDAOIMPL implements MagazineDAO<Client> {
 
     @Override
     public boolean delete(Client client) {
-        String sql = "delete from clients where id=" + client.getId();
+        String sql = String.format("delete from clients where id=%d", client.getId());
         try {
             statement = connection.createStatement();
             statement.execute(sql);
@@ -70,9 +78,10 @@ public class ClientDAOIMPL implements MagazineDAO<Client> {
 
     @Override
     public boolean update(Client c1, Client c2) {
-        String sql = "UPDATE `clients` SET `id` = '" + c2.getId() + "', `full_name` = '" + c2.getName() + "', " +
-                "`gender` = '" + c2.getGender() + "', `address` = '" + c2.getAddress() + "', `phone_number` = '" +
-                c2.getPhone() + "', `email` = '" + c2.getEmail() + "' WHERE `clients`.`id` =" + c1.getId();
+        String sql = String.format("UPDATE `clients` SET `full_name` = '%s', `gender` = '%s', `address` = '%s'," +
+                        " `phone_number` = '%s', `email` = '%s' WHERE `clients`.`id` =%d",
+                c2.getName(), c2.getGender(), c2.getAddress(), c2.getPhone(), c2.getEmail(), c1.getId());
+        System.out.println(sql);
         try {
             statement = connection.createStatement();
             statement.execute(sql);
@@ -123,12 +132,19 @@ public class ClientDAOIMPL implements MagazineDAO<Client> {
     }
 
     public ObservableList<Client> getAll() {
-        ObservableList<Client> clients = FXCollections.observableArrayList(findAll());
-        return clients;
+        try {
+            return FXCollections.observableArrayList(findAll());
+        } catch (NullPointerException e) {
+            return FXCollections.observableArrayList(new ArrayList<>());
+        }
+
     }
 
     public ObservableList<Client> getAll(String s) {
-        ObservableList<Client> clients = FXCollections.observableArrayList(findAll(s));
-        return clients;
+        try {
+            return FXCollections.observableArrayList(findAll(s));
+        } catch (NullPointerException e) {
+            return FXCollections.observableArrayList(new ArrayList<>());
+        }
     }
 }

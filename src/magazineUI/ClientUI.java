@@ -11,19 +11,24 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 public class ClientUI extends BaseUI {
-    ClientDAOIMPL clientDAOIMPL = null;
-    ObservableList<Client> observableList = null;
-    private ComboBox comboBox = null;
+    ClientDAOIMPL clientDAOIMPL;
+    ObservableList<Client> observableList;
+    Stage parentStage;
+    private ComboBox<String> comboBox;
 
     public ClientUI(String label, Stage parentStage) {
         super(label);
-        mainStage.setOnHiding(event -> parentStage.show());
+        this.parentStage = parentStage;
+        mainStage.setOnHiding(event -> {
+            if (parentStage != null) parentStage.show();
+            else new SaleUI();
+        });
     }
 
     public ClientUI(Stage parentStage) {
-        super("Gestion des clients");
-        mainStage.setOnHiding(event -> parentStage.show());
+        this("Gestion des clients", parentStage);
     }
+
 
     public static void createDataView(ObservableList<Client> observableList, TableView<Client> tableView) {
         TableColumn<Client, Long> column1 = new TableColumn<>("Code");
@@ -62,6 +67,7 @@ public class ClientUI extends BaseUI {
         insertContainer.setMinWidth((Width / 3.0) - 20);
         labelList[0] = new Label("Code :");
         textFieldList[0] = new TextField();
+        readOnlyTextField(textFieldList[0]);
         labelList[1] = new Label("Nome :");
         textFieldList[1] = new TextField();
         labelList[2] = new Label("Sexe :");
@@ -126,17 +132,15 @@ public class ClientUI extends BaseUI {
 
     @Override
     protected void addButtonClick() {
-        Long id = checkLong(textFieldList[0]);
-        String phone = checkPhone(textFieldList[2]);
-        String email = checkEmail(textFieldList[2]);
+        String phone = checkPhone(textFieldList[3]);
+        String email = checkEmail(textFieldList[4]);
         String gender = getStringComboBoxInput(comboBox);
-        if (id != null && phone != null && email != null && gender != null) {
-            Client c = new Client(id, textFieldList[1].getText(), gender,
+        if (phone != null && email != null && gender != null) {
+            Client c = new Client(0, textFieldList[1].getText(), gender,
                     textFieldList[2].getText(), phone, email);
             if (clientDAOIMPL.create(c)) {
                 observableList.add(c);
-                for (int i = 0; i < textFieldList.length - 1; i++)
-                    textFieldList[i].clear();
+                clearButtonClick();
             }
         } else {
             System.out.println("Non valid input");
@@ -148,17 +152,14 @@ public class ClientUI extends BaseUI {
     protected void updateButtonClick() {
         Client c = (Client) tableView.getSelectionModel().getSelectedItem();
         int index = tableView.getSelectionModel().getSelectedIndex();
-        Long id = checkLong(textFieldList[0]);
-        String phone = checkPhone(textFieldList[2]);
-        String email = checkEmail(textFieldList[2]);
+        String phone = checkPhone(textFieldList[3]);
+        String email = checkEmail(textFieldList[4]);
         String gender = getStringComboBoxInput(comboBox);
-        if (id != null && phone != null && email != null && gender != null) {
-            if (clientDAOIMPL.update(c, new Client(id, textFieldList[1].getText(), gender,
+        if (phone != null && email != null && gender != null) {
+            if (clientDAOIMPL.update(c, new Client(c.getId(), textFieldList[1].getText(), gender,
                     textFieldList[2].getText(), phone, email))) {
                 observableList.set(index, c);
-                for (int i = 0; i < textFieldList.length - 1; i++)
-                    textFieldList[i].clear();
-                tableView.getSelectionModel().clearSelection();
+                clearButtonClick();
             }
 
         } else {
@@ -170,22 +171,22 @@ public class ClientUI extends BaseUI {
     @Override
     protected void deleteButtonClick() {
         Client c = (Client) tableView.getSelectionModel().getSelectedItem();
-        if (clientDAOIMPL.delete(c)) {
-            observableList.remove(c);
-            tableView.getSelectionModel().clearSelection();
+        if (c != null) {
+            if (clientDAOIMPL.delete(c)) {
+                System.out.println(c);
+                observableList.remove(c);
+                clearButtonClick();
+            }
         }
 
     }
 
     @Override
     void clearButtonClick() {
-
-        for (int i = 0; i < textFieldList.length; i++)
-            textFieldList[i].clear();
+        for (TextField textField : textFieldList) textField.clear();
         try {
             tableView.getSelectionModel().clearSelection();
-        } catch (NullPointerException e) {
+        } catch (NullPointerException ignored) {
         }
-//        additionalClears();
     }
 }

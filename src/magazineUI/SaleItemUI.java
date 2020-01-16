@@ -9,10 +9,10 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
-import javafx.stage.Stage;
 import productsManagement.Product;
 import productsManagement.ProductDAOIMPL;
 import salesManagment.Sale;
+import salesManagment.SaleDAOIMPL;
 import salesManagment.SaleItem;
 import salesManagment.SaleItemDAOIMPL;
 
@@ -21,6 +21,7 @@ import java.util.ArrayList;
 public class SaleItemUI extends BaseUI {
 
     SaleItemDAOIMPL saleItemDAOIMPL;
+    SaleDAOIMPL saleDAOIMPL;
     ProductDAOIMPL productDAOIMPL;
     ObservableList<SaleItem> saleItemObservableList;
     TableView<SaleItem> saleItemTableView;
@@ -28,29 +29,52 @@ public class SaleItemUI extends BaseUI {
     private VBox productsContainer;
     private ObservableList<Product> productsObservableList;
     private TableView<Product> productsTableView;
+    boolean sandbox;
 
-    public SaleItemUI(String label, Stage parentStage, Sale sale) {
+    public SaleItemUI(String label, Sale sale, boolean sandbox) {
         super(label);
-        mainStage.setOnHiding(event -> {
-            parentStage.show();
+        mainStage.setOnCloseRequest(event -> {
+            event.consume();
+            if (sandbox) {
+                if (sale.getTotal() > 0) {
+                    sale.setTotal(0);
+                    boolean error = false;
+                    saleDAOIMPL = new SaleDAOIMPL();
+                    float total = 0;
+                    if (saleDAOIMPL.create(sale)) {
+                        System.out.println("sale" + sale);
+                        for (SaleItem si : saleItemObservableList) {
+                            System.out.println("saleitem " + si);
+                            if (!saleItemDAOIMPL.create(si)) {
+                                error = true;
+                                saleDAOIMPL.delete(sale);
+                            }
+                        }
+                    } else {
+                        error = true;
+                    }
+                    if (!error) {
+                        mainStage.close();
+                        new PaymentUI(sale);
+                    } else {
+                        showAlert(Alert.AlertType.ERROR, "Error creating your order");
+                    }
+                } else if (showAlert(Alert.AlertType.CONFIRMATION, "The order is empty do you want to quit ?") == ButtonType.OK) {
+                    mainStage.close();
+                    new SaleUI();
+                }
+            } else {
+                mainStage.close();
+                new SaleUI();
+            }
         });
         this.sale = sale;
-    }
-
-    public SaleItemUI(Stage parentStage, Sale sale) {
-        super("Gestion des lignes de commande");
-        mainStage.setOnHiding(event -> {
-            parentStage.show();
-        });
-        this.sale = sale;
+        this.sandbox = sandbox;
         initAdditionalComponents();
     }
 
-
-    public SaleItemUI(Sale sale) {
-        super("Gestion des lignes de commande");
-        this.sale = sale;
-        initAdditionalComponents();
+    public SaleItemUI(Sale sale, boolean sandbox) {
+        this("Gestions des ligne de commande", sale, sandbox);
     }
 
     public static void createDataView(ObservableList<SaleItem> observableList, TableView<SaleItem> tableView) {
@@ -192,70 +216,100 @@ public class SaleItemUI extends BaseUI {
         SaleItem saleItem = null;
         for (SaleItem si : saleItemObservableList) {
             if (si.getProduct().equals(p)) {
-                System.out.println("Found it");
                 saleItem = si;
                 break;
             }
         }
-
         long num = 1;
+        boolean doit = false;
         if (saleItemObservableList.size() != 0)
             num = saleItemObservableList.get(saleItemObservableList.size() - 1).getNum() + 1;
         Long quantity = checkLong(textFieldList[1]);
         if (saleItem != null && quantity != null) {
-            double old = saleItem.getQuantity();
             saleItem.setQuantity(saleItem.getQuantity() + quantity);
-            if (saleItemDAOIMPL.updateQuantity(saleItem, old)) {
-                System.out.println("Updaaaated");
-//                saleItemTableView.refresh();
-                clearButtonClick();
-            }
+            saleItem.setSubTotal(saleItem.getQuantity() * saleItem.getProduct().getPrice());
+            if (!sandbox) {
+                if (saleItemDAOIMPL.updateQuantity(saleItem)) doit = true;
+            } else sale.setTotal(sale.getTotal() + quantity * saleItem.getProduct().getPrice());
         } else if (p != null && quantity != null) {
             saleItem = new SaleItem(null, num, quantity, p, sale);
-            if (saleItemDAOIMPL.create(saleItem)) {
-                saleItemObservableList.add(saleItem);
-                clearButtonClick();
-            }
+            if (!sandbox) {
+                if (saleItemDAOIMPL.create(saleItem)) {
+                    doit = true;
+                }
+            } else sale.setTotal(sale.getTotal() + saleItem.getSubTotal());
+            if (doit || sandbox) saleItemObservableList.add(saleItem);
         } else {
             System.out.println("Non valid input");
         }
-        textFieldList[3].setText(String.valueOf(sale.getId()));
-        textFieldList[4].setText(String.valueOf(sale.getTotal()));
+        if (doit || sandbox) {
+            saleItemTableView.refresh();
+            clearButtonClick();
+            textFieldList[3].setText(String.valueOf(sale.getId()));
+            textFieldList[4].setText(String.valueOf(sale.getTotal()));
+        }
     }
 
     @Override
     protected void updateButtonClick() {
+        boolean doit = false;
         Product p = productsTableView.getSelectionModel().getSelectedItem();
         SaleItem saleItem = saleItemTableView.getSelectionModel().getSelectedItem();
         int index = saleItemTableView.getSelectionModel().getSelectedIndex();
         Long quantity = checkLong(textFieldList[1]);
         if (p != null && saleItem != null && quantity != null) {
-            if (saleItemDAOIMPL.update(saleItem, new SaleItem(null, saleItem.getNum(), quantity, p, sale))) {
-                saleItemObservableList.set(index, saleItem);
-                for (int i = 0; i < textFieldList.length - 1; i++)
-                    textFieldList[i].clear();
-                saleItemTableView.getSelectionModel().clearSelection();
-                productsTableView.getSelectionModel().clearSelection();
-                textFieldList[3].setText(String.valueOf(sale.getId()));
-                textFieldList[4].setText(String.valueOf(sale.getTotal()));
-            }
+            SaleItem new_item = new SaleItem(null, saleItem.getNum(), quantity, p, sale);
+            if (!sandbox) {
+                if (saleItemDAOIMPL.update(saleItem, new_item)) {
 
+                    doit = true;
+                }
+            } else {
+                double old_subtotal = saleItem.getQuantity() * saleItem.getProduct().getPrice();
+                double new_subtotal = new_item.getQuantity() * saleItem.getProduct().getPrice();
+                saleItem.update(new_item);
+                sale.setTotal(sale.getTotal() + (new_subtotal - old_subtotal));
+            }
         } else {
             System.out.println("Non valid input");
+        }
+        if (doit || sandbox) {
+            saleItemObservableList.set(index, saleItem);
+            clearButtonClick();
+            textFieldList[3].setText(String.valueOf(sale.getId()));
+            textFieldList[4].setText(String.valueOf(sale.getTotal()));
         }
     }
 
     @Override
     protected void deleteButtonClick() {
+        boolean doit = false;
         SaleItem saleItem = saleItemTableView.getSelectionModel().getSelectedItem();
+        if (saleItem != null) {
+            if (sandbox) {
+                System.out.println("total" + sale.getTotal());
+                sale.setTotal(sale.getTotal() - saleItem.getSubTotal());
+                System.out.println("total" + sale.getTotal());
+            } else {
+                saleDAOIMPL = new SaleDAOIMPL();
+                System.out.println("total 1 :" + sale.getTotal());
+                if (saleDAOIMPL.setTotal(sale, sale.getTotal() - saleItem.getSubTotal())) {
+                    System.out.println("total 2 :" + sale.getTotal());
+                    if (saleItemDAOIMPL.delete(saleItem)) {
+                        doit = true;
+                    }
+                }
 
-        if (saleItemDAOIMPL.delete(saleItem)) {
-            saleItemObservableList.remove(saleItem);
-            saleItemTableView.getSelectionModel().clearSelection();
-            clearButtonClick();
-            textFieldList[3].setText(String.valueOf(sale.getId()));
-            textFieldList[4].setText(String.valueOf(sale.getTotal()));
+            }
+            if (doit || sandbox) {
+                saleItemObservableList.remove(saleItem);
+                saleItemTableView.getSelectionModel().clearSelection();
+                clearButtonClick();
+                textFieldList[3].setText(String.valueOf(sale.getId()));
+                textFieldList[4].setText(String.valueOf(sale.getTotal()));
+            }
         }
+
     }
 
     @Override
@@ -265,7 +319,7 @@ public class SaleItemUI extends BaseUI {
             textFieldList[i].clear();
         try {
             tableView.getSelectionModel().clearSelection();
-        } catch (NullPointerException e) {
+        } catch (NullPointerException ignored) {
         }
 //        additionalClears();
     }
