@@ -203,6 +203,7 @@ public class PaymentUI extends BaseUI {
             Double amount = checkDouble(textFieldList[3]);
             String type = getStringComboBoxInput(comboBox);
             if (date != null && amount != null && type != null) {
+
                 if (amount > rest.get()) {
                     setAsError(textFieldList[3]);
                     showAlert(Alert.AlertType.ERROR, "Reduce the amount");
@@ -234,18 +235,6 @@ public class PaymentUI extends BaseUI {
             System.out.println(account_number);
             if (account_number == null)
                 return false;
-//            account = new Account(account_number);
-//            boolean valid = sendRequest(account);
-//            if (valid) {
-//                valid = getResponse();
-//                if (valid) {
-//                    Transaction transaction = new Transaction(p.getAmount(), account);
-//                    valid = sendRequest(transaction);
-//                    if (valid)
-//                        valid = getResponse();
-//                }
-//            }
-//            return valid;
             Transaction transaction = new Transaction(p.getAmount(), new Account(account_number));
             boolean valid = sendRequest(transaction);
             if (valid) {
@@ -342,66 +331,68 @@ public class PaymentUI extends BaseUI {
         LocalDate date = getDateDatepicker(datePicker);
 
         if (p != null && date != null) {
-            if (p.getType().equals(SaleDAOIMPL.paymentTypes[2])) {
-                Dialog<Payment> dialog = new Dialog<>();
-                dialog.setTitle("Check number");
-                dialog.setHeaderText("Please enter the check number and state");
-                DialogPane dialogPane = dialog.getDialogPane();
-                dialogPane.getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
-                TextField textField = new TextField(p.getChecknumber());
-                ObservableList<String> options =
-                        FXCollections.observableArrayList(Payment.paymentsStates);
-                ComboBox<String> comboBox = new ComboBox<>(options);
-                comboBox.getSelectionModel().select(p.getState());
-                dialogPane.setContent(new VBox(8, textField, comboBox));
-                Platform.runLater(textField::requestFocus);
-                dialog.setResultConverter((ButtonType button) -> {
-                    if (button == ButtonType.OK) {
-                        String s = textField.getText().equals("") ? "------" : textField.getText();
-                        return new Payment(p.getId(), p.getNum(), p.getAmount(), date, p.getType(), comboBox.getSelectionModel().getSelectedItem(), s, sale);
-                    }
-                    return null;
-                });
-                p2 = dialog.showAndWait().orElse(null);
-                if (p2 != null)
-                    DoIt.set(showAlert(Alert.AlertType.WARNING, "Do you want to update ?") == ButtonType.OK);
-            } else if (p.getType().equals(SaleDAOIMPL.paymentTypes[3])) {
-                List<String> choices = new ArrayList<>();
-                choices.add(SaleDAOIMPL.paymentTypes[1]);
-                choices.add(SaleDAOIMPL.paymentTypes[2]);
-                ChoiceDialog<String> dialog = new ChoiceDialog<>(SaleDAOIMPL.paymentTypes[1], choices);
-                dialog.setTitle("Choose a payment type");
-                dialog.setContentText("Choose a payment:");
-                Optional<String> result = dialog.showAndWait();
-                result.ifPresent(type -> {
-                    if (type.equals(SaleDAOIMPL.paymentTypes[1]))
-                        p.setState(Payment.paymentsStates[0]);
-                    p.setType(type);
-                    DoIt.set(showAlert(Alert.AlertType.WARNING, "Do you want to update ?") == ButtonType.OK);
-                });
-            } else {
-                Double amount = checkDouble(textFieldList[3]);
-                if (amount != null) {
-                    deference = amount - p.getAmount();
-                    if (deference > rest.get()) {
-                        setAsError(textFieldList[3]);
-                        showAlert(Alert.AlertType.ERROR, "Reduce the amount");
-                    } else {
-                        p2 = new Payment(null, 0, amount, date, p.getType(), p.getState(), p.getChecknumber(), sale);
+            if (showAlert(Alert.AlertType.CONFIRMATION, "Do you want to update ?") == ButtonType.OK) {
+                if (p.getType().equals(SaleDAOIMPL.paymentTypes[2])) {
+                    Dialog<Payment> dialog = new Dialog<>();
+                    dialog.setTitle("Check number");
+                    dialog.setHeaderText("Please enter the check number and state");
+                    DialogPane dialogPane = dialog.getDialogPane();
+                    dialogPane.getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+                    TextField textField = new TextField(p.getChecknumber());
+                    ObservableList<String> options =
+                            FXCollections.observableArrayList(Payment.paymentsStates);
+                    ComboBox<String> comboBox = new ComboBox<>(options);
+                    comboBox.getSelectionModel().select(p.getState());
+                    dialogPane.setContent(new VBox(8, textField, comboBox));
+                    Platform.runLater(textField::requestFocus);
+                    dialog.setResultConverter((ButtonType button) -> {
+                        if (button == ButtonType.OK) {
+                            String s = textField.getText().equals("") ? "------" : textField.getText();
+                            return new Payment(p.getId(), p.getNum(), p.getAmount(), date, p.getType(), comboBox.getSelectionModel().getSelectedItem(), s, sale);
+                        }
+                        return null;
+                    });
+                    p2 = dialog.showAndWait().orElse(null);
+                    if (p2 != null)
                         DoIt.set(showAlert(Alert.AlertType.WARNING, "Do you want to update ?") == ButtonType.OK);
-                    }
+                } else if (p.getType().equals(SaleDAOIMPL.paymentTypes[3])) {
+                    List<String> choices = new ArrayList<>();
+                    choices.add(SaleDAOIMPL.paymentTypes[1]);
+                    choices.add(SaleDAOIMPL.paymentTypes[2]);
+                    ChoiceDialog<String> dialog = new ChoiceDialog<>(SaleDAOIMPL.paymentTypes[1], choices);
+                    dialog.setTitle("Choose a payment type");
+                    dialog.setContentText("Choose a payment:");
+                    Optional<String> result = dialog.showAndWait();
+                    result.ifPresent(type -> {
+                        if (type.equals(SaleDAOIMPL.paymentTypes[1]))
+                            p.setState(Payment.paymentsStates[0]);
+                        p.setType(type);
+                        DoIt.set(showAlert(Alert.AlertType.WARNING, "Do you want to update ?") == ButtonType.OK);
+                    });
                 } else {
-                    showAlert(Alert.AlertType.ERROR, "Non valid input");
+                    Double amount = checkDouble(textFieldList[3]);
+                    if (amount != null) {
+                        deference = amount - p.getAmount();
+                        if (deference > rest.get()) {
+                            setAsError(textFieldList[3]);
+                            showAlert(Alert.AlertType.ERROR, "Reduce the amount");
+                        } else {
+                            p2 = new Payment(null, 0, amount, date, p.getType(), p.getState(), p.getChecknumber(), sale);
+                            DoIt.set(showAlert(Alert.AlertType.WARNING, "Do you want to update ?") == ButtonType.OK);
+                        }
+                    } else {
+                        showAlert(Alert.AlertType.ERROR, "Non valid input");
+                    }
                 }
-            }
 
-            if (DoIt.get())
-                if (paymentDAOIMPL.update(p, p2)) {
-                    paymentObservableList.set(index, p);
-                    clearButtonClick();
-                    paymentTableView.getSelectionModel().clearSelection();
-                    payed.set(payed.get() + deference);
-                }
+                if (DoIt.get())
+                    if (paymentDAOIMPL.update(p, p2)) {
+                        paymentObservableList.set(index, p);
+                        clearButtonClick();
+                        paymentTableView.getSelectionModel().clearSelection();
+                        payed.set(payed.get() + deference);
+                    }
+            }
         }
     }
 
@@ -415,7 +406,7 @@ public class PaymentUI extends BaseUI {
                     paymentObservableList.remove(p);
                     paymentTableView.getSelectionModel().clearSelection();
                 }
-        }
+        } else showAlert(Alert.AlertType.ERROR, "Nothing selected");
     }
 
     @Override

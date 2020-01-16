@@ -83,7 +83,6 @@ public class SaleDAOIMPL implements MagazineDAO<Sale> {
     @Override
     public boolean update(Sale sale1, Sale sale2) {
         String sql;
-
         sql = String.format("UPDATE `sales` SET `client_id` = '%d',`total` = '%.2f' WHERE `sales`.`id` =%d",
                 sale2.getClient().getId(),
                 sale2.getTotal(),

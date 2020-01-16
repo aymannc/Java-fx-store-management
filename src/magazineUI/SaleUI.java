@@ -271,7 +271,7 @@ public class SaleUI extends BaseUI {
             s.setClient(c);
             mainStage.close();
             new SaleItemUI(s, true);
-        }
+        } else showAlert(Alert.AlertType.ERROR, "Nothing selected");
     }
 
     @Override
@@ -280,21 +280,27 @@ public class SaleUI extends BaseUI {
         Sale sale = saleTableView.getSelectionModel().getSelectedItem();
         int index = saleTableView.getSelectionModel().getSelectedIndex();
         if (c != null) {
-            Sale s = new Sale(null, c, 0, null, null, null);
-            if (saleDAOIMPL.update(sale, s)) {
-                salesObservableList.set(index, sale);
-                clearButtonClick();
+            if (showAlert(Alert.AlertType.CONFIRMATION, "Do you want to update ?") == ButtonType.OK) {
+                Sale s = new Sale(null, c, sale.getTotal(), sale.getDateAdded(), null, null);
+                if (saleDAOIMPL.update(sale, s)) {
+                    salesObservableList.set(index, sale);
+                    clearButtonClick();
+                }
             }
-        }
+        } else showAlert(Alert.AlertType.ERROR, "Nothing selected");
     }
 
     @Override
     protected void deleteButtonClick() {
         Sale s = saleTableView.getSelectionModel().getSelectedItem();
-        if (saleDAOIMPL.delete(s)) {
-            salesObservableList.remove(s);
-            clearButtonClick();
-        }
+        if (s != null) {
+            if (showAlert(Alert.AlertType.WARNING, "Do you want to delete ?") == ButtonType.OK)
+                if (saleDAOIMPL.delete(s)) {
+                    salesObservableList.remove(s);
+                    clearButtonClick();
+                }
+        } else showAlert(Alert.AlertType.ERROR, "Nothing selected");
+
     }
 
     @Override

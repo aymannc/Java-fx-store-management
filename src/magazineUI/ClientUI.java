@@ -142,10 +142,7 @@ public class ClientUI extends BaseUI {
                 observableList.add(c);
                 clearButtonClick();
             }
-        } else {
-            System.out.println("Non valid input");
-        }
-
+        } else showAlert(Alert.AlertType.ERROR, "Non valid input");
     }
 
     @Override
@@ -155,29 +152,27 @@ public class ClientUI extends BaseUI {
         String phone = checkPhone(textFieldList[3]);
         String email = checkEmail(textFieldList[4]);
         String gender = getStringComboBoxInput(comboBox);
-        if (phone != null && email != null && gender != null) {
-            if (clientDAOIMPL.update(c, new Client(c.getId(), textFieldList[1].getText(), gender,
-                    textFieldList[2].getText(), phone, email))) {
-                observableList.set(index, c);
-                clearButtonClick();
-            }
-
-        } else {
-            System.out.println("Non valid input");
-        }
-
+        if (showAlert(Alert.AlertType.CONFIRMATION, "Do you want to update ?") == ButtonType.OK)
+            if (phone != null && email != null && gender != null) {
+                if (clientDAOIMPL.update(c, new Client(c.getId(), textFieldList[1].getText(), gender,
+                        textFieldList[2].getText(), phone, email))) {
+                    observableList.set(index, c);
+                    clearButtonClick();
+                }
+            } else showAlert(Alert.AlertType.ERROR, "Non valid input");
     }
 
     @Override
     protected void deleteButtonClick() {
         Client c = (Client) tableView.getSelectionModel().getSelectedItem();
         if (c != null) {
-            if (clientDAOIMPL.delete(c)) {
-                System.out.println(c);
-                observableList.remove(c);
-                clearButtonClick();
-            }
-        }
+            if (showAlert(Alert.AlertType.WARNING, "Do you want to delete ?") == ButtonType.OK)
+                if (clientDAOIMPL.delete(c)) {
+                    System.out.println(c);
+                    observableList.remove(c);
+                    clearButtonClick();
+                }
+        } else showAlert(Alert.AlertType.ERROR, "Nothing selected");
 
     }
 

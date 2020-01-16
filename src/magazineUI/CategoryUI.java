@@ -4,10 +4,7 @@ import categoriesManagement.Category;
 import categoriesManagement.CategoryDAOIMPL;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
-import javafx.scene.control.Label;
-import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableView;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
@@ -89,15 +86,12 @@ public class CategoryUI extends BaseUI {
         String name = textFieldList[1].getText();
         if (name.length() > 0) {
             Category c = new Category(0, name);
-            System.out.println(c);
             if (categoryDAOIMPL.create(c)) {
                 System.out.println(c);
                 observableList.add(c);
                 clearButtonClick();
             }
-        } else {
-            System.out.println("Non valid input");
-        }
+        } else showAlert(Alert.AlertType.ERROR, "Non valid input");
 
     }
 
@@ -107,25 +101,25 @@ public class CategoryUI extends BaseUI {
         int index = tableView.getSelectionModel().getSelectedIndex();
         String name = textFieldList[1].getText();
         if (name != null && c != null) {
-            if (categoryDAOIMPL.update(c, new Category(c.getId(), name))) {
-                observableList.set(index, c);
-                clearButtonClick();
-            }
+            if (showAlert(Alert.AlertType.CONFIRMATION, "Do you want to update ?") == ButtonType.OK)
+                if (categoryDAOIMPL.update(c, new Category(c.getId(), name))) {
+                    observableList.set(index, c);
+                    clearButtonClick();
+                }
 
-        } else {
-            System.out.println("Non valid input");
-        }
+        } else showAlert(Alert.AlertType.ERROR, "Non valid input");
     }
 
     @Override
     protected void deleteButtonClick() {
         Category c = (Category) tableView.getSelectionModel().getSelectedItem();
         if (c != null) {
-            if (categoryDAOIMPL.delete(c)) {
-                observableList.remove(c);
-                tableView.getSelectionModel().clearSelection();
-            }
-        }
+            if (showAlert(Alert.AlertType.WARNING, "Do you want to delete ?") == ButtonType.OK)
+                if (categoryDAOIMPL.delete(c)) {
+                    observableList.remove(c);
+                    tableView.getSelectionModel().clearSelection();
+                }
+        } else showAlert(Alert.AlertType.ERROR, "Nothing selected");
 
     }
 

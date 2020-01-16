@@ -240,7 +240,7 @@ public class SaleItemUI extends BaseUI {
             } else sale.setTotal(sale.getTotal() + saleItem.getSubTotal());
             if (doit || sandbox) saleItemObservableList.add(saleItem);
         } else {
-            System.out.println("Non valid input");
+            showAlert(Alert.AlertType.ERROR, "Non valid input");
         }
         if (doit || sandbox) {
             saleItemTableView.refresh();
@@ -258,21 +258,22 @@ public class SaleItemUI extends BaseUI {
         int index = saleItemTableView.getSelectionModel().getSelectedIndex();
         Long quantity = checkLong(textFieldList[1]);
         if (p != null && saleItem != null && quantity != null) {
-            SaleItem new_item = new SaleItem(null, saleItem.getNum(), quantity, p, sale);
-            if (!sandbox) {
-                if (saleItemDAOIMPL.update(saleItem, new_item)) {
-
-                    doit = true;
+            if (showAlert(Alert.AlertType.CONFIRMATION, "Do you want to update ?") == ButtonType.OK) {
+                SaleItem new_item = new SaleItem(null, saleItem.getNum(), quantity, p, sale);
+                if (!sandbox) {
+                    if (saleItemDAOIMPL.update(saleItem, new_item)) {
+                        doit = true;
+                    }
+                } else {
+                    double old_subtotal = saleItem.getQuantity() * saleItem.getProduct().getPrice();
+                    double new_subtotal = new_item.getQuantity() * saleItem.getProduct().getPrice();
+                    saleItem.update(new_item);
+                    sale.setTotal(sale.getTotal() + (new_subtotal - old_subtotal));
                 }
-            } else {
-                double old_subtotal = saleItem.getQuantity() * saleItem.getProduct().getPrice();
-                double new_subtotal = new_item.getQuantity() * saleItem.getProduct().getPrice();
-                saleItem.update(new_item);
-                sale.setTotal(sale.getTotal() + (new_subtotal - old_subtotal));
             }
-        } else {
-            System.out.println("Non valid input");
-        }
+
+        } else showAlert(Alert.AlertType.ERROR, "Non valid input");
+
         if (doit || sandbox) {
             saleItemObservableList.set(index, saleItem);
             clearButtonClick();
@@ -286,20 +287,21 @@ public class SaleItemUI extends BaseUI {
         boolean doit = false;
         SaleItem saleItem = saleItemTableView.getSelectionModel().getSelectedItem();
         if (saleItem != null) {
-            if (sandbox) {
-                System.out.println("total" + sale.getTotal());
-                sale.setTotal(sale.getTotal() - saleItem.getSubTotal());
-                System.out.println("total" + sale.getTotal());
-            } else {
-                saleDAOIMPL = new SaleDAOIMPL();
-                System.out.println("total 1 :" + sale.getTotal());
-                if (saleDAOIMPL.setTotal(sale, sale.getTotal() - saleItem.getSubTotal())) {
-                    System.out.println("total 2 :" + sale.getTotal());
-                    if (saleItemDAOIMPL.delete(saleItem)) {
-                        doit = true;
+            if (showAlert(Alert.AlertType.WARNING, "Do you want to delete ?") == ButtonType.OK) {
+                if (sandbox) {
+                    System.out.println("total" + sale.getTotal());
+                    sale.setTotal(sale.getTotal() - saleItem.getSubTotal());
+                    System.out.println("total" + sale.getTotal());
+                } else {
+                    saleDAOIMPL = new SaleDAOIMPL();
+                    System.out.println("total 1 :" + sale.getTotal());
+                    if (saleDAOIMPL.setTotal(sale, sale.getTotal() - saleItem.getSubTotal())) {
+                        System.out.println("total 2 :" + sale.getTotal());
+                        if (saleItemDAOIMPL.delete(saleItem)) {
+                            doit = true;
+                        }
                     }
                 }
-
             }
             if (doit || sandbox) {
                 saleItemObservableList.remove(saleItem);
@@ -308,7 +310,7 @@ public class SaleItemUI extends BaseUI {
                 textFieldList[3].setText(String.valueOf(sale.getId()));
                 textFieldList[4].setText(String.valueOf(sale.getTotal()));
             }
-        }
+        } else showAlert(Alert.AlertType.ERROR, "Nothing selected");
 
     }
 

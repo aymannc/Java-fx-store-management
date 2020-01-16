@@ -126,9 +126,7 @@ public class ProductUI extends BaseUI {
                 observableList.add(p);
                 clearButtonClick();
             }
-        } else {
-            System.out.println("Non valid input");
-        }
+        } else showAlert(Alert.AlertType.ERROR, "Non valid input");
     }
 
 
@@ -140,23 +138,26 @@ public class ProductUI extends BaseUI {
         Double price = checkDouble(textFieldList[2]);
         Category category = comboBox.getValue();
         if (price != null && category != null && p != null) {
-            if (productDataAccess.update(p, new Product(p.getCode(), designation, price, category))) {
-                observableList.set(index, p);
-                clearButtonClick();
-            }
+            if (showAlert(Alert.AlertType.CONFIRMATION, "Do you want to update ?") == ButtonType.OK)
+                if (productDataAccess.update(p, new Product(p.getCode(), designation, price, category))) {
+                    observableList.set(index, p);
+                    clearButtonClick();
+                }
 
-        } else {
-            System.out.println("Non valid input");
-        }
+        } else showAlert(Alert.AlertType.ERROR, "Non valid input");
+
     }
 
     @Override
     protected void deleteButtonClick() {
         Product p = (Product) tableView.getSelectionModel().getSelectedItem();
-        if (productDataAccess.delete(p)) {
-            observableList.remove(p);
-            clearButtonClick();
-        }
+        if (p != null) {
+            if (showAlert(Alert.AlertType.WARNING, "Do you want to delete ?") == ButtonType.OK)
+                if (productDataAccess.delete(p)) {
+                    observableList.remove(p);
+                    clearButtonClick();
+                }
+        } else showAlert(Alert.AlertType.ERROR, "Nothing selected");
     }
 
     @Override
